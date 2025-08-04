@@ -10,7 +10,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('configuracion')
-        .setDescription('Configuración unificada del bot (Solo para admins)')
+        .setDescription('Configuración unificada del bot (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         // Voz subcommand group
         .addSubcommandGroup(subcommandGroup =>
@@ -27,11 +27,11 @@ module.exports = {
                                 .setRequired(true)
                                 .addChannelTypes(ChannelType.GuildVoice))
                         .addStringOption(option =>
-                            option.setName('nombre plantilla')
+                            option.setName('nombre-plantilla')
                                 .setDescription('Plantilla para el nombre de los canales (usa {usuario} para el nombre del usuario)')
                                 .setRequired(false))
                         .addIntegerOption(option =>
-                            option.setName('limite usuarios')
+                            option.setName('limite-usuarios')
                                 .setDescription('Límite de usuarios por canal dinámico (0 = sin límite)')
                                 .setRequired(false)
                                 .setMinValue(0)
@@ -49,10 +49,6 @@ module.exports = {
                         .addRoleOption(option =>
                             option.setName('staff')
                                 .setDescription('Rol de staff/administradores')
-                                .setRequired(false))
-                        .addRoleOption(option =>
-                            option.setName('moderador')
-                                .setDescription('Rol de moderadores')
                                 .setRequired(false)))
                 .addSubcommand(subcommand =>
                     subcommand
@@ -64,7 +60,7 @@ module.exports = {
                                 .addChannelTypes(ChannelType.GuildText)
                                 .setRequired(false))
                         .addRoleOption(option =>
-                            option.setName('rol verificado')
+                            option.setName('rol-verificado')
                                 .setDescription('Rol que se otorga a los usuarios verificados')
                                 .setRequired(false))
                         .addStringOption(option =>
@@ -96,16 +92,6 @@ module.exports = {
                         .addChannelOption(option =>
                             option.setName('soporte')
                                 .setDescription('Canal para tickets de soporte')
-                                .addChannelTypes(ChannelType.GuildText)
-                                .setRequired(false))
-                        .addChannelOption(option =>
-                            option.setName('dudas')
-                                .setDescription('Canal para dudas y preguntas')
-                                .addChannelTypes(ChannelType.GuildText)
-                                .setRequired(false))
-                        .addChannelOption(option =>
-                            option.setName('anuncios')
-                                .setDescription('Canal para anuncios importantes')
                                 .addChannelTypes(ChannelType.GuildText)
                                 .setRequired(false)))
                 .addSubcommand(subcommand =>
@@ -139,7 +125,7 @@ module.exports = {
                         .setDescription('Personaliza el mensaje de normas'))
                 .addSubcommand(subcommand =>
                     subcommand
-                        .setName('ver actual')
+                        .setName('ver-actual')
                         .setDescription('Ver la configuración actual de textos'))
                 .addSubcommand(subcommand =>
                     subcommand
@@ -205,8 +191,8 @@ module.exports = {
 async function handleVoiceConfig(interaction, subcommand) {
     if (subcommand === 'configurar') {
         const triggerChannel = interaction.options.getChannel('canal');
-        const nameTemplate = interaction.options.getString('nombre plantilla') || 'Canal de {usuario}';
-        const userLimit = interaction.options.getInteger('limite usuarios') || 0;
+        const nameTemplate = interaction.options.getString('nombre-plantilla') || 'Canal de {usuario}';
+        const userLimit = interaction.options.getInteger('limite-usuarios') || 0;
 
         // Check bot permissions
         const botPermissions = interaction.guild.members.me.permissions;
@@ -309,7 +295,7 @@ async function handleTextsConfig(interaction, subcommand) {
         case 'normas':
             await handleRulesTextConfig(interaction);
             break;
-        case 'ver actual':
+        case 'ver-actual':
             await handleViewCurrentConfig(interaction);
             break;
         case 'restaurar':
@@ -327,18 +313,12 @@ async function handleTextsConfig(interaction, subcommand) {
  */
 async function handleStaffRoleConfig(interaction, config) {
     const staffRole = interaction.options.getRole('staff');
-    const moderatorRole = interaction.options.getRole('moderador');
 
     const updates = [];
 
     if (staffRole) {
         config.staffRoleId = staffRole.id;
         updates.push(`• Rol de staff: ${staffRole}`);
-    }
-
-    if (moderatorRole) {
-        config.moderatorRoleId = moderatorRole.id;
-        updates.push(`• Rol de moderador: ${moderatorRole}`);
     }
 
     if (updates.length === 0) {
@@ -362,7 +342,7 @@ async function handleStaffRoleConfig(interaction, config) {
  */
 async function handleVerificationConfig(interaction, config) {
     const channel = interaction.options.getChannel('canal');
-    const verifiedRole = interaction.options.getRole('rol verificado');
+    const verifiedRole = interaction.options.getRole('rol-verificado');
     const title = interaction.options.getString('titulo');
     const description = interaction.options.getString('descripcion');
     const activate = interaction.options.getBoolean('activar');
@@ -420,8 +400,6 @@ async function handleVerificationConfig(interaction, config) {
 async function handleChannelConfig(interaction, config) {
     const moderationChannel = interaction.options.getChannel('moderacion');
     const supportChannel = interaction.options.getChannel('soporte');
-    const doubtsChannel = interaction.options.getChannel('dudas');
-    const announcementsChannel = interaction.options.getChannel('anuncios');
 
     const updates = [];
 
@@ -433,16 +411,6 @@ async function handleChannelConfig(interaction, config) {
     if (supportChannel) {
         config.supportChannelId = supportChannel.id;
         updates.push(`• Canal de soporte: ${supportChannel}`);
-    }
-
-    if (doubtsChannel) {
-        config.doubtsChannelId = doubtsChannel.id;
-        updates.push(`• Canal de dudas: ${doubtsChannel}`);
-    }
-
-    if (announcementsChannel) {
-        config.announcementsChannelId = announcementsChannel.id;
-        updates.push(`• Canal de anuncios: ${announcementsChannel}`);
     }
 
     if (updates.length === 0) {

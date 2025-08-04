@@ -10,8 +10,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('listar')
-        .setDescription('Lista cursos y comisiones del sistema (Solo para admins)')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .setDescription('Lista cursos y comisiones del sistema')
         .addSubcommand(subcommand =>
             subcommand
                 .setName('comisiones')
@@ -33,14 +32,6 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction 
      */
     async execute(interaction) {
-        // Check if user has staff permission
-        if (!interaction.client.configManager.hasStaffPermission(interaction.member)) {
-            return interaction.reply({
-                content: embedStrings.messages.errors.noStaffPermission,
-                ephemeral: true
-            });
-        }
-
         const subcommand = interaction.options.getSubcommand();
 
         try {

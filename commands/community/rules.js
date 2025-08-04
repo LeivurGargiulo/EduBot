@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('normas')
-        .setDescription('Envía las normas y directrices de la comunidad (Solo para staff)')
+        .setDescription('Envía las normas y directrices de la comunidad (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 5,

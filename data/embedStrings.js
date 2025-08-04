@@ -14,7 +14,7 @@ const embedStrings = {
             howToStart: {
                 name: '🛠 ¿Cómo empezar?',
                 value: '• Inscribite en el formulario si todavía no lo hiciste → `/inscripciones`\n' +
-                       '• Inscribite usando el comando `/enroll` para que el bot te asigne tu rol automáticamente.\n' +
+                       '• Inscribite usando el comando `/anotarse` para que el bot te asigne tu rol automáticamente.\n' +
                        '• Una vez tengas tu rol, vas a ver el canal de tu comisión y todo el material del curso 📚\n' +
                        '• Leé las reglas, saludá si querés, y sentite libre de participar a tu ritmo 🧃'
             },
@@ -23,15 +23,14 @@ const embedStrings = {
                 value: '• Respetá los tiempos, emociones y procesos de les demás.\n' +
                        '• No se permite discriminación, violencia o comentarios fuera de lugar.\n' +
                        '• Evitá el spam o desviar el foco de los canales temáticos.\n' +
-                       '• Si algo te incomoda, hablalo con el equipo o escribí por privado a un `@moderador`.'
+                       '• Si algo te incomoda, hablalo con el equipo o escribí por privado a un administrador.'
             },
             importantLinks: {
                 name: '📎 Links importantes',
-                value: (doubtsChannel, announcementsChannel) => 
+                value: () => 
                     `• **Formulario de inscripción:** Usa \`/inscripciones\`\n` +
                     `• **Material de clases:** Usa \`/material\`\n` +
-                    `• **Dudas y preguntas:** ${doubtsChannel}\n` +
-                    `• **Anuncios importantes:** ${announcementsChannel}`
+                    `• **Soporte:** Usa \`/soporte\` para ayuda`
             }
         },
         footer: '🌟 ¡Gracias por sumarte! Acá valoramos el aprendizaje lento, la empatía y el acompañamiento. Nadie nació sabiendo y estamos para crecer juntes 🌱'
@@ -84,7 +83,7 @@ const embedStrings = {
                 name: '🔒 4. Privacidad y Seguridad',
                 value: '• No compartas información personal públicamente\n' +
                        '• No se permite el doxxing ni compartir información privada de otros\n' +
-                       '• Reporta comportamientos inapropiados a los moderadores\n' +
+                       '• Reporta comportamientos inapropiados a los administradores\n' +
                        '• Ten cuidado con lo que compartes en capturas de pantalla'
             },
             content: {
@@ -123,13 +122,13 @@ const embedStrings = {
             },
             appeal: {
                 name: '🔄 Proceso de Apelación',
-                value: '• Contacta a los moderadores por MD\n' +
+                value: '• Contacta a los administradores por MD\n' +
                        '• Explica tu perspectiva respetuosamente\n' +
                        '• Lo revisaremos y responderemos en 48 horas\n' +
                        '• Todos merecen una audiencia justa'
             }
         },
-        footer: '¿Preguntas sobre las normas? ¡Consulta a un moderador!'
+        footer: '¿Preguntas sobre las normas? ¡Consulta a un administrador!'
     },
 
     helpfulCommands: {
@@ -214,7 +213,7 @@ const embedStrings = {
             },
             afterRegistration: {
                 name: "🤖 ¿Y después?",
-                value: "Cuando termines el formulario, usá el comando `/inscribirme` acá en el servidor.\nEl bot va a buscar tu Discord en la base de datos y te va a asignar el rol correcto según el curso y comisión."
+                value: "Cuando termines el formulario, usá el comando `/anotarse` acá en el servidor.\nEl bot va a buscar tu Discord en la base de datos y te va a asignar el rol correcto según el curso y comisión."
             }
         },
         footer: "Este paso es obligatorio para acceder a las clases y canales del curso ✨"
@@ -228,7 +227,7 @@ const embedStrings = {
             fields: {
                 getStarted: {
                     name: '🎯 Para Empezar',
-                    value: '¡Usa `/inscribirme` para seleccionar tus cursos y unirte a la comunidad de aprendizaje!'
+                    value: '¡Usa `/anotarse` para seleccionar tus cursos y unirte a la comunidad de aprendizaje!'
                 }
             }
         },
@@ -433,9 +432,8 @@ const embedStrings = {
             fields: {
                 details: {
                     name: '📋 Detalles de la Comisión',
-                    value: (courseName, shift, number) => 
+                    value: (courseName, number) => 
                         `**Curso:** ${courseName}\n` +
-                        `**Turno:** ${shift}\n` +
                         `**Número:** ${number}`
                 },
                 access: {
@@ -469,9 +467,8 @@ const embedStrings = {
             fields: {
                 details: {
                     name: '📋 Información de la Comisión',
-                    value: (courseName, shift, number) => 
+                    value: (courseName, number) => 
                         `**📚 Curso:** ${courseName}\n` +
-                        `**🕐 Turno:** ${shift}\n` +
                         `**🔢 Número:** ${number}`
                 },
                 instructions: {
@@ -490,9 +487,8 @@ const embedStrings = {
             fields: {
                 details: {
                     name: '📋 Detalles de la Comisión',
-                    value: (courseName, shift, number) => 
+                    value: (courseName, number) => 
                         `**Curso:** ${courseName}\n` +
-                        `**Turno:** ${shift}\n` +
                         `**Número:** ${number}`
                 },
                 resources: {
@@ -503,7 +499,7 @@ const embedStrings = {
                         `**Canal de voz:** ${voiceChannel}`
                 }
             },
-            footer: 'Los estudiantes pueden unirse usando /inscribirme'
+            footer: 'Los estudiantes pueden unirse usando /anotarse'
         },
         list: {
             title: '📚 Lista de Comisiones',
@@ -526,8 +522,8 @@ const embedStrings = {
                     howToCreate: {
                         name: '🛠️ Cómo crear una comisión',
                         value: '1. Primero agrega un curso: `/agregar-curso`\n' +
-                               '2. Luego crea la comisión: `/crear-comision`\n' +
-                               '3. Los estudiantes se unen con: `/inscribirme`'
+                               '2. Luego crea la comisión: `/crear-comision` (formato: CURSO-NÚMERO)\n' +
+                               '3. Los estudiantes se unen con: `/anotarse`'
                     }
                 },
                 footer: 'Sistema de Comisiones'
@@ -548,7 +544,7 @@ const embedStrings = {
                 },
                 usage: {
                     name: '🛠️ Uso',
-                    value: (code) => `Ahora puedes crear comisiones usando códigos que empiecen con **${code}**\n\nEjemplo: \`/crear-comision ${code}TG01\``
+                    value: (code) => `Ahora puedes crear comisiones usando el formato **${code}-NÚMERO**\n\nEjemplo: \`/crear-comision ${code}-01\``
                 }
             },
             footer: 'Bot Educativo • Gestión de Cursos'
@@ -649,7 +645,7 @@ const embedStrings = {
             supportNotConfigured: '❌ El sistema de soporte no está configurado. Por favor, contacta a un administrador.',
             supportChannelInvalid: '❌ El canal de soporte configurado no es válido. Por favor, contacta a un administrador.',
             feedbackNotConfigured: '❌ La función de feedback no está configurada. Por favor, contacta a un administrador.',
-            noStaffPermission: '❌ Solo los miembros del staff pueden usar este comando. Configura el rol de staff con `/configuracion roles staff:@RolStaff`.',
+            noStaffPermission: '❌ Solo los administradores pueden usar este comando.',
             userNotFound: '❌ No se pudo encontrar al usuario en este servidor.',
             cannotKickUser: '❌ No puedo expulsar a este usuario. Asegúrate de que mi rol esté por encima del rol del usuario y que no sea el dueño del servidor.',
             cannotMuteAdmin: '❌ No puedes silenciar a un administrador.',
@@ -683,7 +679,7 @@ const embedStrings = {
             dynamicVoiceConfigError: '❌ Error al configurar los canales dinámicos. Inténtalo de nuevo.',
             dynamicChannelCreateError: '❌ Error al crear el canal dinámico.',
             dynamicChannelDeleteError: '❌ Error al eliminar el canal dinámico.',
-            noStaffPermission: '❌ Solo los miembros del staff pueden usar este comando.',
+            noStaffPermission: '❌ Solo los administradores pueden usar este comando.',
             configurationError: '❌ Error al actualizar la configuración. Inténtalo de nuevo.',
             teacherNotFound: '❌ Profesor no encontrado. Usa el autocompletado para ver los profesores disponibles.',
             verificationNotEnabled: '❌ El sistema de verificación no está activado.',
@@ -701,7 +697,7 @@ const embedStrings = {
             commissionAlreadyExists: (code) => `❌ La comisión **${code}** ya existe.`,
             courseNotRegistered: (code) => `❌ El curso **${code}** no está registrado. Usa \`/agregar-curso\` primero.`,
             commissionCreateError: '❌ Error al crear la comisión. Inténtalo de nuevo más tarde.',
-            invalidCourseCode: '❌ El código del curso debe tener exactamente 2 letras mayúsculas.',
+            invalidCourseCode: '❌ El código del curso debe contener solo letras mayúsculas.',
             courseAlreadyExists: (code, name) => `❌ El curso **${code}** ya existe con el nombre "${name}".`,
             courseAddError: '❌ Error al agregar el curso. Inténtalo de nuevo más tarde.',
             commissionListError: '❌ Error al obtener la lista de comisiones.',

@@ -9,20 +9,17 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('agregar curso')
-        .setDescription('Agrega un nuevo curso a la base de datos (Solo para staff)')
+        .setName('agregar-curso')
+        .setDescription('Agrega un nuevo curso a la base de datos (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>
             option.setName('codigo')
-                .setDescription('Código del curso (2 letras, ej: UX)')
-                .setRequired(true)
-                .setMaxLength(2)
-                .setMinLength(2))
+                .setDescription('Código del curso (ej: UX)')
+                .setRequired(true))
         .addStringOption(option =>
             option.setName('nombre')
                 .setDescription('Nombre completo del curso')
-                .setRequired(true)
-                .setMaxLength(100)),
+                .setRequired(true)),
     
     cooldown: 5,
 
@@ -42,8 +39,8 @@ module.exports = {
         const courseCode = interaction.options.getString('codigo').toUpperCase();
         const courseName = interaction.options.getString('nombre');
 
-        // Validate course code format (2 letters only)
-        if (!/^[A-Z]{2}$/.test(courseCode)) {
+        // Validate course code format (letters only)
+        if (!/^[A-Z]+$/.test(courseCode)) {
             return interaction.reply({
                 content: embedStrings.messages.errors.invalidCourseCode,
                 ephemeral: true

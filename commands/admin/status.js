@@ -10,7 +10,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('estado')
-        .setDescription('Estado unificado de todos los sistemas del bot (Solo para admins)')
+        .setDescription('Estado unificado de todos los sistemas del bot (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand

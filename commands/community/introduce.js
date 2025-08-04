@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('presentarme')
-        .setDescription('Envía la guía para presentarse a la comunidad (Solo para staff)')
+        .setDescription('Envía la guía para presentarse a la comunidad (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 10,

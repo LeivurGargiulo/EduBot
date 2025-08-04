@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hola')
-        .setDescription('Envía el mensaje de bienvenida al canal (Solo para staff)')
+        .setDescription('Envía el mensaje de bienvenida al canal (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 10,

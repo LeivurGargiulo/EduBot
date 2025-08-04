@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('roles')
-        .setDescription('Envía el panel de selección de roles (Solo para staff)')
+        .setDescription('Envía el panel de selección de roles (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 10,

@@ -8,7 +8,7 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('enroll')
+        .setName('anotarse')
         .setDescription('Únete a tu comisión usando el código asignado')
         .addStringOption(option =>
             option.setName('codigo')

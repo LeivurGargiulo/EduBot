@@ -8,15 +8,13 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('crear comision')
-        .setDescription('Crea una nueva comisión con canales y rol (Solo para staff)')
+        .setName('crear-comision')
+        .setDescription('Crea una nueva comisión con canales y rol (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>
             option.setName('codigo')
-                .setDescription('Código de la comisión (ej: MBT01)')
-                .setRequired(true)
-                .setMaxLength(5)
-                .setMinLength(5)),
+                .setDescription('Código de la comisión (formato: CURSO-NUMERO, ej: PH-01)')
+                .setRequired(true)),
     
     cooldown: 10,
 
@@ -58,12 +56,8 @@ module.exports = {
 
             // Check if course exists in database
             const courseData = getCourseData(interaction.client, interaction.guild.id, parsedCode.courseCode);
-            if (!courseData) {
-                return interaction.reply({
-                    content: embedStrings.messages.errors.courseNotRegistered(parsedCode.courseCode),
-                    ephemeral: true
-                });
-            }
+            // If course doesn't exist, we'll use the commission code as the course name
+            const courseName = courseData ? courseData.name : `Curso ${parsedCode.courseCode}`;
 
             await interaction.deferReply();
 
@@ -94,7 +88,7 @@ module.exports = {
                 name: `${commissionCode.toLowerCase()}-general`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-                topic: `Canal principal de la comisión ${commissionCode} - ${courseData.name} - Para dudas generales y conversación`,
+                topic: `Canal principal de la comisión ${commissionCode} - ${courseName} - Para dudas generales y conversación`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -119,7 +113,7 @@ module.exports = {
                 name: `${commissionCode.toLowerCase()}-anuncios`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-                topic: `Canal de anuncios de la comisión ${commissionCode} - ${courseData.name} - Solo para anuncios del staff`,
+                topic: `Canal de anuncios de la comisión ${commissionCode} - ${courseName} - Solo para anuncios del staff`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -149,7 +143,7 @@ module.exports = {
                 name: `${commissionCode.toLowerCase()}-charla`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-                topic: `Canal de charla libre de la comisión ${commissionCode} - ${courseData.name} - Para socializar y temas off-topic`,
+                topic: `Canal de charla libre de la comisión ${commissionCode} - ${courseName} - Para socializar y temas off-topic`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -171,10 +165,10 @@ module.exports = {
 
             // Create voice channel (for classes or oral discussions)
             const voiceChannel = await interaction.guild.channels.create({
-                name: `🔊 ${commissionCode}`,
+                name: `🔊 ${commissionCode.toLowerCase()}`,
                 type: ChannelType.GuildVoice,
                 parent: category.id,
-                topic: `Canal de voz para clases y charlas orales de la comisión ${commissionCode} - ${courseData.name}`,
+                topic: `Canal de voz para clases y charlas orales de la comisión ${commissionCode} - ${courseName}`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -196,7 +190,7 @@ module.exports = {
             // Save commission to database/config
             saveCommissionData(interaction.client, interaction.guild.id, commissionCode, {
                 courseCode: parsedCode.courseCode,
-                courseName: courseData.name,
+                courseName: courseName,
                 shift: parsedCode.shift,
                 number: parsedCode.number,
                 roleId: commissionRole.id,
@@ -211,13 +205,13 @@ module.exports = {
             // Send welcome message to the main text channel
             const welcomeEmbed = new EmbedBuilder()
                 .setTitle(embedStrings.commission.welcome.title(commissionCode))
-                .setDescription(embedStrings.commission.welcome.description(courseData.name))
+                .setDescription(embedStrings.commission.welcome.description(courseName))
                 .setColor(getCommissionColor(parsedCode.courseCode))
                 .addFields(
                     {
                         name: embedStrings.commission.welcome.fields.details.name,
                         value: embedStrings.commission.welcome.fields.details.value(
-                            courseData.name,
+                            courseName,
                             getShiftName(parsedCode.shift),
                             parsedCode.number
                         ),
@@ -251,7 +245,7 @@ module.exports = {
                     {
                         name: embedStrings.commission.created.fields.details.name,
                         value: embedStrings.commission.created.fields.details.value(
-                            courseData.name,
+                            courseName,
                             getShiftName(parsedCode.shift),
                             parsedCode.number
                         ),
@@ -287,7 +281,7 @@ module.exports = {
                         .setColor(embedStrings.colors.info)
                         .addFields(
                             { name: 'Comisión', value: commissionCode, inline: true },
-                            { name: 'Curso', value: courseData.name, inline: true },
+                            { name: 'Curso', value: courseName, inline: true },
                             { name: 'Creado por', value: `${interaction.user.tag} (${interaction.user.id})`, inline: true },
                             { name: 'Rol', value: commissionRole.toString(), inline: true },
                             { name: 'Canal Principal', value: textChannel.toString(), inline: true },
@@ -326,30 +320,28 @@ module.exports = {
  * @returns {Object} Validation result
  */
 function validateCommissionCode(code) {
-    if (code.length !== 5) {
-        return { valid: false, error: 'El código debe tener exactamente 5 caracteres.' };
+    // Validate format: COURSE-NUMBER (e.g., PH-01, MB-02)
+    if (!code || code.length === 0) {
+        return { valid: false, error: 'El código no puede estar vacío.' };
     }
 
-    const courseCode = code.substring(0, 2);
-    const shift = code.substring(2, 3);
-    const number = code.substring(3, 5);
-
-    // Validate course code
-    const validCourses = ['MB', 'MI', 'TW', 'JS', 'PY', 'PH', 'IL', 'AN', 'AF', 'PR'];
-    if (!validCourses.includes(courseCode)) {
-        return { valid: false, error: `Código de curso inválido: ${courseCode}` };
+    // Check if it follows the format COURSE-NUMBER
+    const parts = code.split('-');
+    if (parts.length !== 2) {
+        return { valid: false, error: 'El código debe seguir el formato: CURSO-NUMERO (ej: PH-01)' };
     }
 
-    // Validate shift
-    const validShifts = ['M', 'T', 'N'];
-    if (!validShifts.includes(shift)) {
-        return { valid: false, error: `Turno inválido: ${shift}` };
+    const courseCode = parts[0];
+    const number = parts[1];
+
+    // Validate course code (letters only)
+    if (!/^[A-Z]+$/.test(courseCode)) {
+        return { valid: false, error: 'El código del curso debe contener solo letras mayúsculas.' };
     }
 
-
-    // Validate number
-    if (!/^\d{2}$/.test(number)) {
-        return { valid: false, error: `Número de comisión inválido: ${number}` };
+    // Validate number (digits only)
+    if (!/^\d+$/.test(number)) {
+        return { valid: false, error: 'El número debe contener solo dígitos.' };
     }
 
     return { valid: true };
@@ -361,10 +353,15 @@ function validateCommissionCode(code) {
  * @returns {Object}
  */
 function parseCommissionCode(code) {
+    // Parse format: COURSE-NUMBER (e.g., PH-01)
+    const parts = code.split('-');
+    const courseCode = parts[0];
+    const number = parts[1];
+    
     return {
-        courseCode: code.substring(0, 2),
-        shift: code.substring(2, 3),
-        number: code.substring(3, 5)
+        courseCode: courseCode,
+        shift: 'G', // General shift (not used in new format)
+        number: number
     };
 }
 
@@ -428,7 +425,19 @@ function getCommissionColor(courseCode) {
         'AF': 0x9999FF, // Purple (After Effects)
         'PR': 0x9999FF  // Purple (Premiere)
     };
-    return colors[courseCode] || embedStrings.colors.primary;
+    
+    // For flexible course codes, use a hash-based color generation
+    if (colors[courseCode]) {
+        return colors[courseCode];
+    }
+    
+    // Generate a consistent color based on the course code
+    let hash = 0;
+    for (let i = 0; i < courseCode.length; i++) {
+        hash = courseCode.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = Math.abs(hash) % 0xFFFFFF;
+    return color;
 }
 
 /**
@@ -440,7 +449,8 @@ function getShiftName(shift) {
     const shifts = {
         'M': 'Mañana',
         'T': 'Tarde', 
-        'N': 'Noche'
+        'N': 'Noche',
+        'G': 'General'
     };
     return shifts[shift] || shift;
 }

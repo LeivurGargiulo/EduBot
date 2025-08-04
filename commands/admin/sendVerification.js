@@ -9,8 +9,8 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('enviar verificacion')
-        .setDescription('Envía el mensaje de verificación al canal configurado (Solo para staff)')
+        .setName('enviar-verificacion')
+        .setDescription('Envía el mensaje de verificación al canal configurado (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 10,
