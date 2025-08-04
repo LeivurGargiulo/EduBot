@@ -1,0 +1,28 @@
+{
+  "name": "modular-discord-bot",
+  "version": "1.0.0",
+  "description": "A complete modular Discord bot for educational communities",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "education",
+    "modular"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/voice": "^0.18.0",
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=16.9.0"
+  }
+}
