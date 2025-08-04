@@ -8,7 +8,7 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('crear-comision')
+        .setName('crear comision')
         .setDescription('Crea una nueva comisión con canales y rol (Solo para staff)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>

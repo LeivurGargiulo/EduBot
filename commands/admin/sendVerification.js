@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('enviar-verificacion')
+        .setName('enviar verificacion')
         .setDescription('Envía el mensaje de verificación al canal configurado (Solo para staff)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     

@@ -649,7 +649,7 @@ const embedStrings = {
             supportNotConfigured: '❌ El sistema de soporte no está configurado. Por favor, contacta a un administrador.',
             supportChannelInvalid: '❌ El canal de soporte configurado no es válido. Por favor, contacta a un administrador.',
             feedbackNotConfigured: '❌ La función de feedback no está configurada. Por favor, contacta a un administrador.',
-            noStaffPermission: '❌ Solo los miembros del staff pueden usar este comando. Configura el rol de staff con `/configurar-bot roles staff:@RolStaff`.',
+            noStaffPermission: '❌ Solo los miembros del staff pueden usar este comando. Configura el rol de staff con `/configuracion roles staff:@RolStaff`.',
             userNotFound: '❌ No se pudo encontrar al usuario en este servidor.',
             cannotKickUser: '❌ No puedo expulsar a este usuario. Asegúrate de que mi rol esté por encima del rol del usuario y que no sea el dueño del servidor.',
             cannotMuteAdmin: '❌ No puedes silenciar a un administrador.',
@@ -718,7 +718,7 @@ const embedStrings = {
             rolesHelp: '🎭 ¡Gran idea! Configurar tus roles ayuda a otros a conocerte. ¡Usa `/roles` para seleccionar tus pronombres e identidades!',
             ticketWelcome: (supportRoleId, user) => `¡Hola <@&${supportRoleId}> y ${user}! Se ha creado un nuevo ticket.`,
             alreadyConnectedToChannel: '✅ Ya estoy conectado a este canal de voz.',
-            noDynamicVoiceConfig: '❌ No hay configuración de canales dinámicos. Usa `/configurar-voz` para configurar el sistema.',
+            noDynamicVoiceConfig: '❌ No hay configuración de canales dinámicos. Usa `/configuracion voz configurar` para configurar el sistema.',
             dynamicVoiceHelp: '💡 Únete al canal activador para crear automáticamente tu propio canal de voz temporal.',
             verificationSuccess: (roleName) => `✅ ¡Verificación completada! Ahora tienes el rol **${roleName}**.`
         },

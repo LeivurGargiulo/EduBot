@@ -8,7 +8,7 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('mi-curso')
+        .setName('mi curso')
         .setDescription('Ve tus cursos inscritos y tu progreso'),
     
     cooldown: 5,

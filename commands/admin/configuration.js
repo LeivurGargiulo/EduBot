@@ -27,11 +27,11 @@ module.exports = {
                                 .setRequired(true)
                                 .addChannelTypes(ChannelType.GuildVoice))
                         .addStringOption(option =>
-                            option.setName('nombre-plantilla')
+                            option.setName('nombre plantilla')
                                 .setDescription('Plantilla para el nombre de los canales (usa {usuario} para el nombre del usuario)')
                                 .setRequired(false))
                         .addIntegerOption(option =>
-                            option.setName('limite-usuarios')
+                            option.setName('limite usuarios')
                                 .setDescription('Límite de usuarios por canal dinámico (0 = sin límite)')
                                 .setRequired(false)
                                 .setMinValue(0)
@@ -41,7 +41,6 @@ module.exports = {
             subcommandGroup
                 .setName('roles')
                 .setDescription('Configuración de roles e identidad')
-                
                 
                 .addSubcommand(subcommand =>
                     subcommand
@@ -54,6 +53,31 @@ module.exports = {
                         .addRoleOption(option =>
                             option.setName('moderador')
                                 .setDescription('Rol de moderadores')
+                                .setRequired(false)))
+                .addSubcommand(subcommand =>
+                    subcommand
+                        .setName('verificacion')
+                        .setDescription('Configura el sistema de verificación')
+                        .addChannelOption(option =>
+                            option.setName('canal')
+                                .setDescription('Canal donde aparecerá el mensaje de verificación')
+                                .addChannelTypes(ChannelType.GuildText)
+                                .setRequired(false))
+                        .addRoleOption(option =>
+                            option.setName('rol verificado')
+                                .setDescription('Rol que se otorga a los usuarios verificados')
+                                .setRequired(false))
+                        .addStringOption(option =>
+                            option.setName('titulo')
+                                .setDescription('Título del mensaje de verificación')
+                                .setRequired(false))
+                        .addStringOption(option =>
+                            option.setName('descripcion')
+                                .setDescription('Descripción del mensaje de verificación')
+                                .setRequired(false))
+                        .addBooleanOption(option =>
+                            option.setName('activar')
+                                .setDescription('Activar o desactivar el sistema de verificación')
                                 .setRequired(false))))
         // Bot subcommand group
         .addSubcommandGroup(subcommandGroup =>
@@ -115,7 +139,7 @@ module.exports = {
                         .setDescription('Personaliza el mensaje de normas'))
                 .addSubcommand(subcommand =>
                     subcommand
-                        .setName('ver-actual')
+                        .setName('ver actual')
                         .setDescription('Ver la configuración actual de textos'))
                 .addSubcommand(subcommand =>
                     subcommand
@@ -181,8 +205,8 @@ module.exports = {
 async function handleVoiceConfig(interaction, subcommand) {
     if (subcommand === 'configurar') {
         const triggerChannel = interaction.options.getChannel('canal');
-        const nameTemplate = interaction.options.getString('nombre-plantilla') || 'Canal de {usuario}';
-        const userLimit = interaction.options.getInteger('limite-usuarios') || 0;
+        const nameTemplate = interaction.options.getString('nombre plantilla') || 'Canal de {usuario}';
+        const userLimit = interaction.options.getInteger('limite usuarios') || 0;
 
         // Check bot permissions
         const botPermissions = interaction.guild.members.me.permissions;
@@ -242,10 +266,12 @@ async function handleRolesConfig(interaction, subcommand) {
 
     if (subcommand === 'staff') {
         await handleStaffRoleConfig(interaction, guildConfig);
+    } else if (subcommand === 'verificacion') {
+        await handleVerificationConfig(interaction, guildConfig);
     }
 
     // Save updated config
-    interaction.client.botConfig.set(interaction.guild.id, guildConfig);
+    interaction.client.configManager.setGuildConfig(interaction.guild.id, guildConfig);
 }
 
 /**
@@ -266,7 +292,7 @@ async function handleBotConfig(interaction, subcommand) {
     }
 
     // Save updated config
-    interaction.client.botConfig.set(interaction.guild.id, guildConfig);
+    interaction.client.configManager.setGuildConfig(interaction.guild.id, guildConfig);
 }
 
 /**
@@ -283,7 +309,7 @@ async function handleTextsConfig(interaction, subcommand) {
         case 'normas':
             await handleRulesTextConfig(interaction);
             break;
-        case 'ver-actual':
+        case 'ver actual':
             await handleViewCurrentConfig(interaction);
             break;
         case 'restaurar':
@@ -324,6 +350,63 @@ async function handleStaffRoleConfig(interaction, config) {
 
     const embed = new EmbedBuilder()
         .setTitle('✅ Configuración de Roles de Staff Actualizada')
+        .setDescription(updates.join('\n'))
+        .setColor(embedStrings.colors.success)
+        .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+}
+
+/**
+ * Handle verification configuration
+ */
+async function handleVerificationConfig(interaction, config) {
+    const channel = interaction.options.getChannel('canal');
+    const verifiedRole = interaction.options.getRole('rol verificado');
+    const title = interaction.options.getString('titulo');
+    const description = interaction.options.getString('descripcion');
+    const activate = interaction.options.getBoolean('activar');
+
+    if (!config.verification) {
+        config.verification = {};
+    }
+
+    const updates = [];
+
+    if (channel) {
+        config.verification.channelId = channel.id;
+        updates.push(`• Canal de verificación: ${channel}`);
+    }
+
+    if (verifiedRole) {
+        config.verification.roleId = verifiedRole.id;
+        updates.push(`• Rol verificado: ${verifiedRole}`);
+    }
+
+    if (title) {
+        config.verification.title = title;
+        updates.push(`• Título personalizado configurado`);
+    }
+
+    if (description) {
+        config.verification.description = description;
+        updates.push(`• Descripción personalizada configurada`);
+    }
+
+    if (activate !== null) {
+        config.verification.enabled = activate;
+        updates.push(`• Sistema ${activate ? 'activado' : 'desactivado'}`);
+    }
+
+    if (updates.length === 0) {
+        return interaction.reply({
+            content: '❌ No se especificaron cambios para la configuración de verificación.',
+            ephemeral: true
+        });
+    }
+
+    const embed = new EmbedBuilder()
+        .setTitle('✅ Configuración de Verificación Actualizada')
         .setDescription(updates.join('\n'))
         .setColor(embedStrings.colors.success)
         .setTimestamp();

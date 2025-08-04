@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('agregar-curso')
+        .setName('agregar curso')
         .setDescription('Agrega un nuevo curso a la base de datos (Solo para staff)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(option =>

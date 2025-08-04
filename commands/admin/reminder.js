@@ -21,7 +21,7 @@ module.exports = {
                         .setRequired(true)
                         .setMaxLength(2))
                 .addStringOption(option =>
-                    option.setName('fecha-hora')
+                    option.setName('fecha hora')
                         .setDescription('Fecha y hora (formato: YYYY-MM-DD HH:MM)')
                         .setRequired(true))
                 .addChannelOption(option =>
@@ -101,7 +101,7 @@ module.exports = {
      */
     async createReminder(interaction) {
         const courseCode = interaction.options.getString('curso').toUpperCase();
-        const dateTimeString = interaction.options.getString('fecha-hora');
+        const dateTimeString = interaction.options.getString('fecha hora');
         const channel = interaction.options.getChannel('canal');
         const description = interaction.options.getString('descripcion');
 
