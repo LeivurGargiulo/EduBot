@@ -300,13 +300,28 @@ module.exports = {
         } catch (error) {
             console.error('❌ Error crear la comisión:', error);
             
+            let errorMessage = '❌ Error al crear la comisión. ';
+            
+            // Provide more specific error messages
+            if (error.code === 50013) {
+                errorMessage += 'El bot no tiene permisos suficientes. Verifica que tenga permisos de "Gestionar Canales", "Gestionar Roles" y "Ver Canales".';
+            } else if (error.code === 50001) {
+                errorMessage += 'No se puede acceder al canal. Verifica que el bot tenga permisos para ver y gestionar canales.';
+            } else if (error.code === 10013) {
+                errorMessage += 'El canal especificado no existe.';
+            } else if (error.message.includes('Missing Permissions')) {
+                errorMessage += 'Faltan permisos necesarios. Verifica que el bot tenga todos los permisos requeridos.';
+            } else {
+                errorMessage += 'Inténtalo de nuevo más tarde. Si el problema persiste, contacta a un administrador.';
+            }
+            
             if (interaction.deferred) {
                 await interaction.editReply({
-                    content: embedStrings.messages.errors.commissionCreateError
+                    content: errorMessage
                 });
             } else {
                 await interaction.reply({
-                    content: embedStrings.messages.errors.commissionCreateError,
+                    content: errorMessage,
                     ephemeral: true
                 });
             }

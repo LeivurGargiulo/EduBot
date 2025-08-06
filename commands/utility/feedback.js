@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('feedback')
-        .setDescription('Envía un enlace para dar tu opinión sobre la comunidad.'),
+        .setDescription('Envía un enlace para dar tu opinión sobre la plataforma.'),
     
     cooldown: 30,
 

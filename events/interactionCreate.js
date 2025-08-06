@@ -233,7 +233,15 @@ async function handleButtonInteraction(interaction) {
                 await handleIntroInteraction(interaction, type);
                 break;
             case 'ticket':
-                await handleTicketInteraction(interaction, type, rest.join('_'));
+                const threadId = rest.join('_');
+                if (!threadId) {
+                    await interaction.reply({
+                        content: embedStrings.messages.errors.invalidAction,
+                        ephemeral: true
+                    });
+                    return;
+                }
+                await handleTicketInteraction(interaction, type, threadId);
                 break;
             case 'verify':
                 await handleVerificationInteraction(interaction, type);
@@ -476,7 +484,11 @@ async function handleTicketInteraction(interaction, type, threadId) {
         }
     } catch (error) {
         console.error('❌ Error in ticket interaction:', error);
-        await sendErrorResponse(interaction, 'Error al procesar la acción del ticket.');
+        try {
+            await sendErrorResponse(interaction, 'Error al procesar la acción del ticket.');
+        } catch (sendError) {
+            console.error('❌ Failed to send error response:', sendError);
+        }
     }
 }
 
@@ -593,12 +605,7 @@ async function handleIntroInteraction(interaction, type) {
             });
         } 
         
-        if (type === 'roles') {
-            return await interaction.reply({
-                content: embedStrings.messages.info.rolesHelp,
-                ephemeral: true
-            });
-        }
+
     } catch (error) {
         console.error('❌ Error in intro interaction:', error);
         await sendErrorResponse(interaction, 'Error al procesar la guía de presentación.');
@@ -714,8 +721,11 @@ async function handleRoleToggle(interaction, roleType) {
  * @param {string} message 
  */
 async function sendErrorResponse(interaction, message) {
+    // Ensure message is not empty
+    const safeMessage = message && message.trim() ? message.trim() : 'Se produjo un error inesperado.';
+    
     const errorResponse = {
-        content: `❌ ${message}`,
+        content: `❌ ${safeMessage}`,
         ephemeral: true
     };
 

@@ -36,22 +36,7 @@ const embedStrings = {
         footer: '🌟 ¡Gracias por sumarte! Acá valoramos el aprendizaje lento, la empatía y el acompañamiento. Nadie nació sabiendo y estamos para crecer juntes 🌱'
     },
 
-    // Role Selection Embeds
-    roles: {
-        title: '🎭 Selección de Roles',
-        description: '¡Elige tus roles para personalizar tu experiencia en el servidor! Haz clic en los botones de abajo para agregar o quitar roles.',
-        fields: {
-            pronouns: {
-                name: '🗣️ Pronombres',
-                value: 'Selecciona los pronombres que usas para que la comunidad te trate correctamente'
-            },
-            identities: {
-                name: '🏳️‍⚧️ Identidades',
-                value: 'Comparte tu identidad para conectar con personas afines y crear un espacio más inclusivo'
-            }
-        },
-        footer: 'Bot Educativo • Gestión de Roles'
-    },
+
 
     // Rules and Guidelines Embeds
     rules: {
@@ -138,7 +123,6 @@ const embedStrings = {
             gettingStarted: {
                 name: '🎭 Para Empezar',
                 value: '`/presentarme` - Guía de presentación\n' +
-                       '`/roles` - Selecciona tus roles de cursos\n' +
                        '`/mi-curso` - Ve tus cursos inscritos'
             },
             learning: {
@@ -622,7 +606,7 @@ const embedStrings = {
     messages: {
         success: {
             welcomeSent: '✅ El mensaje de bienvenida ha sido enviado.',
-            rolesPanelSent: '✅ El panel de selección de roles ha sido enviado.',
+
             rulesSent: '✅ El panel de normas ha sido enviado.',
             introGuideSent: '✅ La guía de presentación ha sido enviada al canal.',
             ticketCreated: (thread) => `✅ ¡Tu ticket de soporte ha sido creado! Por favor, dirígete a ${thread} para continuar.`,
@@ -711,7 +695,7 @@ const embedStrings = {
             reminderNotFound: (reminderId) => `❌ No se encontró el recordatorio con ID: \`${reminderId}\``
         },
         info: {
-            rolesHelp: '🎭 ¡Gran idea! Configurar tus roles ayuda a otros a conocerte. ¡Usa `/roles` para seleccionar tus pronombres e identidades!',
+
             ticketWelcome: (supportRoleId, user) => `¡Hola <@&${supportRoleId}> y ${user}! Se ha creado un nuevo ticket.`,
             alreadyConnectedToChannel: '✅ Ya estoy conectado a este canal de voz.',
             noDynamicVoiceConfig: '❌ No hay configuración de canales dinámicos. Usa `/configuracion voz configurar` para configurar el sistema.',

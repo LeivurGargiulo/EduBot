@@ -1,11 +1,26 @@
 /**
  * Configuration Manager Utility
- * Manages bot configuration with fallback to environment variables
+ * Manages bot configuration with SQLite database persistence and fallback to environment variables
  */
+
+const DatabaseManager = require('./databaseManager');
 
 class ConfigManager {
     constructor(client) {
         this.client = client;
+        this.dbManager = new DatabaseManager();
+        this.initialized = false;
+    }
+
+    /**
+     * Initialize the configuration manager
+     */
+    async initialize() {
+        if (this.initialized) return true;
+        
+        const success = this.dbManager.initialize();
+        this.initialized = success;
+        return success;
     }
 
     /**
@@ -14,12 +29,17 @@ class ConfigManager {
      * @returns {Object} Guild configuration
      */
     getGuildConfig(guildId) {
-        if (!this.client.botConfig) {
-            this.client.botConfig = new Map();
+        if (!this.initialized) {
+            console.warn('⚠️  ConfigManager not initialized, falling back to in-memory storage');
+            if (!this.client.botConfig) {
+                this.client.botConfig = new Map();
+            }
+            const config = this.client.botConfig.get(guildId);
+            return config || {};
         }
         
         try {
-            const config = this.client.botConfig.get(guildId);
+            const config = this.dbManager.getGuildConfig(guildId);
             return config || {};
         } catch (error) {
             console.error(`❌ Error getting guild config for ${guildId}:`, error);
@@ -33,11 +53,24 @@ class ConfigManager {
      * @param {Object} config 
      */
     setGuildConfig(guildId, config) {
-        try {
-            if (!this.client.botConfig) {
-                this.client.botConfig = new Map();
+        if (!this.initialized) {
+            console.warn('⚠️  ConfigManager not initialized, falling back to in-memory storage');
+            try {
+                if (!this.client.botConfig) {
+                    this.client.botConfig = new Map();
+                }
+                this.client.botConfig.set(guildId, config);
+            } catch (error) {
+                console.error(`❌ Error setting guild config for ${guildId}:`, error);
             }
-            this.client.botConfig.set(guildId, config);
+            return;
+        }
+
+        try {
+            const success = this.dbManager.setGuildConfig(guildId, config);
+            if (!success) {
+                console.error(`❌ Failed to save guild config for ${guildId} to database`);
+            }
         } catch (error) {
             console.error(`❌ Error setting guild config for ${guildId}:`, error);
         }
@@ -52,13 +85,18 @@ class ConfigManager {
      */
     getConfigValue(guildId, key, envKey = null) {
         try {
-            const config = this.getGuildConfig(guildId);
-            if (!config) return envKey ? process.env[envKey] : null;
-            
-            return config[key] || (envKey ? process.env[envKey] : null);
+            if (this.initialized) {
+                const value = this.dbManager.getConfigValue(guildId, key);
+                return value || (envKey ? process.env[envKey] : null);
+            } else {
+                const config = this.getGuildConfig(guildId);
+                if (!config) return envKey ? process.env[envKey] : null;
+                
+                return config[key] || (envKey ? process.env[envKey] : null);
+            }
         } catch (error) {
             console.error(`❌ Error getting config value ${key} for ${guildId}:`, error);
-        return config[key] || (envKey ? process.env[envKey] : null);
+            return envKey ? process.env[envKey] : null;
         }
     }
 
@@ -232,12 +270,83 @@ class ConfigManager {
                     description: null
                 },
                 customTexts: {},
-
                 courses: {},
                 commissions: {},
                 reminders: {}
             });
         }
+    }
+
+    /**
+     * Get courses for a guild
+     * @param {string} guildId 
+     * @returns {Array}
+     */
+    getCourses(guildId) {
+        if (!this.initialized) return [];
+        return this.dbManager.getCourses(guildId);
+    }
+
+    /**
+     * Add a course
+     * @param {string} guildId 
+     * @param {Object} courseData 
+     * @returns {number|null} Course ID
+     */
+    addCourse(guildId, courseData) {
+        if (!this.initialized) return null;
+        return this.dbManager.addCourse(guildId, courseData);
+    }
+
+    /**
+     * Get reminders for a guild
+     * @param {string} guildId 
+     * @returns {Array}
+     */
+    getReminders(guildId) {
+        if (!this.initialized) return [];
+        return this.dbManager.getReminders(guildId);
+    }
+
+    /**
+     * Add a reminder
+     * @param {string} guildId 
+     * @param {Object} reminderData 
+     * @returns {number|null} Reminder ID
+     */
+    addReminder(guildId, reminderData) {
+        if (!this.initialized) return null;
+        return this.dbManager.addReminder(guildId, reminderData);
+    }
+
+    /**
+     * Mark reminder as sent
+     * @param {number} reminderId 
+     * @returns {boolean}
+     */
+    markReminderSent(reminderId) {
+        if (!this.initialized) return false;
+        return this.dbManager.markReminderSent(reminderId);
+    }
+
+    /**
+     * Close database connection
+     */
+    close() {
+        if (this.dbManager) {
+            this.dbManager.close();
+            this.initialized = false;
+        }
+    }
+
+    /**
+     * Backup database
+     * @param {string} backupPath 
+     * @returns {boolean}
+     */
+    backup(backupPath) {
+        if (!this.initialized) return false;
+        return this.dbManager.backup(backupPath);
     }
 }
 

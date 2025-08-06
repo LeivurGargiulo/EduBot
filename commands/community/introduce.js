@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('presentarme')
-        .setDescription('Envía la guía para presentarse a la comunidad (Solo para administradores)')
+        .setDescription('Envía la guía para presentarse a la plataforma (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 10,
@@ -59,12 +59,7 @@ module.exports = {
                     .setCustomId('intro_example')
                     .setLabel('Ver Ejemplo')
                     .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('👁️'),
-                new ButtonBuilder()
-                    .setCustomId('intro_roles')
-                    .setLabel('Configurar mis Roles')
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji('🎭')
+                    .setEmoji('👁️')
             );
 
         await interaction.channel.send({

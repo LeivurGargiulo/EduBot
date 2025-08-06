@@ -494,7 +494,7 @@ async function handleWelcomeTextConfig(interaction) {
         .setLabel('Título del mensaje de bienvenida')
         .setStyle(TextInputStyle.Short)
         .setMaxLength(256)
-        .setPlaceholder('Ej: ¡Bienvenido a nuestra comunidad!')
+        .setPlaceholder('Ej: ¡Bienvenido a nuestra plataforma!')
         .setRequired(false);
 
     const descriptionInput = new TextInputBuilder()
@@ -576,7 +576,7 @@ async function handleRulesTextConfig(interaction) {
         .setLabel('Título del mensaje de normas')
         .setStyle(TextInputStyle.Short)
         .setMaxLength(256)
-        .setPlaceholder('Ej: Normas de la Comunidad')
+        .setPlaceholder('Ej: Normas de la Plataforma')
         .setRequired(false);
 
     const descriptionInput = new TextInputBuilder()

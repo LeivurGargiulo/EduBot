@@ -465,6 +465,12 @@ async function gracefulShutdown(exitCode = 0) {
             client.reminderSystem.stop();
         }
 
+        // Close database connection
+        if (client.configManager) {
+            client.configManager.close();
+            console.log('✅ Database connection closed');
+        }
+
         // Destroy Discord client
         if (client && client.destroy) {
             await client.destroy();
@@ -509,6 +515,15 @@ async function initializeBot() {
         const deploySuccess = await deployCommands();
         if (!deploySuccess) {
             console.warn('⚠️  Command deployment failed, but continuing with bot startup...');
+        }
+        
+        // Initialize database
+        console.log('🗄️  Initializing database...');
+        const dbInitialized = await client.configManager.initialize();
+        if (!dbInitialized) {
+            console.warn('⚠️  Database initialization failed, continuing with in-memory storage');
+        } else {
+            console.log('✅ Database initialized successfully');
         }
         
         // Login to Discord

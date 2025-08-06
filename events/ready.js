@@ -146,7 +146,7 @@ function extractCategoryFromCommand(command) {
     if (command.data.name.includes('material') || command.data.name.includes('curso')) {
         return 'education';
     }
-    if (command.data.name.includes('hola') || command.data.name.includes('roles') || command.data.name.includes('presentar')) {
+                if (command.data.name.includes('hola') || command.data.name.includes('presentar')) {
         return 'community';
     }
     return 'utility';

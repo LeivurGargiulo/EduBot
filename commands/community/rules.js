@@ -9,7 +9,7 @@ const embedStrings = require('../../data/embedStrings');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('normas')
-        .setDescription('Envía las normas y directrices de la comunidad (Solo para administradores)')
+        .setDescription('Envía las normas y directrices de la plataforma (Solo para administradores)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
     cooldown: 5,
@@ -37,8 +37,8 @@ module.exports = {
 
         // Create comprehensive rules embed
         const rulesEmbed = new EmbedBuilder()
-            .setTitle(customTitle)
-            .setDescription(customDescription)
+            .setTitle(customTitle || '📋 Normas y Directrices de la Comunidad')
+            .setDescription(customDescription || '¡Te damos la bienvenida a nuestra comunidad educativa! Por favor, lee y sigue estas directrices para asegurar un ambiente de aprendizaje positivo para todos.')
             .setColor(embedStrings.colors.primary)
             .addFields(
                 {
@@ -77,8 +77,8 @@ module.exports = {
 
         // Create consequences embed
         const consequencesEmbed = new EmbedBuilder()
-            .setTitle(embedStrings.consequences.title)
-            .setDescription(embedStrings.consequences.description)
+            .setTitle(embedStrings.consequences.title || '⚖️ Consecuencias y Moderación')
+            .setDescription(embedStrings.consequences.description || 'Creemos en una moderación justa y transparente. Esto es lo que sucede cuando se rompen las normas:')
             .setColor(embedStrings.colors.red)
             .addFields(
                 {
@@ -97,12 +97,12 @@ module.exports = {
                     inline: false
                 }
             )
-            .setFooter({ text: embedStrings.consequences.footer });
+            .setFooter({ text: embedStrings.consequences.footer || '¿Preguntas sobre las normas? ¡Consulta a un administrador!' });
 
         // Create helpful commands embed
         const commandsEmbed = new EmbedBuilder()
-            .setTitle(embedStrings.helpfulCommands.title)
-            .setDescription(embedStrings.helpfulCommands.description)
+            .setTitle(embedStrings.helpfulCommands.title || '🤖 Comandos Útiles')
+            .setDescription(embedStrings.helpfulCommands.description || 'Usa estos comandos para aprovechar al máximo nuestra comunidad:')
             .setColor(embedStrings.colors.success)
             .addFields(
                 {
@@ -122,12 +122,24 @@ module.exports = {
                 }
             );
 
+        // Ensure all embeds are valid before sending
+        const embedsToSend = [rulesEmbed, consequencesEmbed, commandsEmbed].filter(embed => 
+            embed && embed.data && (embed.data.title || embed.data.description || embed.data.fields?.length > 0)
+        );
+
+        if (embedsToSend.length === 0) {
+            return await interaction.reply({
+                content: '❌ Error: No se pudieron crear los embeds de las normas. Por favor, contacta a un administrador.',
+                ephemeral: true
+            });
+        }
+
         await interaction.channel.send({
-            embeds: [rulesEmbed, consequencesEmbed, commandsEmbed]
+            embeds: embedsToSend
         });
 
         await interaction.reply({
-            content: embedStrings.messages.success.rulesSent,
+            content: embedStrings.messages.success.rulesSent || '✅ El panel de normas ha sido enviado.',
             ephemeral: true
         });
     }

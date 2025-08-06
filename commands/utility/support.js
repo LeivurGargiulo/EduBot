@@ -41,17 +41,32 @@ module.exports = {
         const supportChannelId = interaction.client.configManager.getSupportChannelId(interaction.guild.id);
         const supportRoleId = interaction.client.configManager.getStaffRoleId(interaction.guild.id);
 
-        if (!supportChannelId || !supportRoleId) {
+        // Check if support system is configured
+        if (!supportChannelId) {
             return interaction.reply({
-                content: embedStrings.messages.errors.supportNotConfigured,
+                content: '❌ El canal de soporte no está configurado. Por favor, contacta a un administrador para configurar el sistema de soporte.',
+                ephemeral: true
+            });
+        }
+
+        if (!supportRoleId) {
+            return interaction.reply({
+                content: '❌ El rol de staff de soporte no está configurado. Por favor, contacta a un administrador para configurar el sistema de soporte.',
                 ephemeral: true
             });
         }
 
         const supportChannel = interaction.guild.channels.cache.get(supportChannelId);
-        if (!supportChannel || supportChannel.type !== ChannelType.GuildText) {
+        if (!supportChannel) {
             return interaction.reply({
-                content: embedStrings.messages.errors.supportChannelInvalid,
+                content: '❌ El canal de soporte configurado no existe. Por favor, contacta a un administrador para verificar la configuración.',
+                ephemeral: true
+            });
+        }
+
+        if (supportChannel.type !== ChannelType.GuildText) {
+            return interaction.reply({
+                content: '❌ El canal de soporte configurado no es un canal de texto válido. Por favor, contacta a un administrador.',
                 ephemeral: true
             });
         }
@@ -106,16 +121,20 @@ module.exports = {
 
             // Send confirmation to the user
             await interaction.reply({
-                content: embedStrings.messages.success.ticketCreated(thread),
+                content: embedStrings.messages.success.ticketCreated(thread.toString()),
                 ephemeral: true
             });
 
         } catch (error) {
             console.error('❌ Error crear el ticket de soporte:', error);
-            await interaction.reply({
-                content: embedStrings.messages.errors.ticketCreateError,
-                ephemeral: true
-            });
+            try {
+                await interaction.reply({
+                    content: embedStrings.messages.errors.ticketCreateError,
+                    ephemeral: true
+                });
+            } catch (replyError) {
+                console.error('❌ Failed to send error reply:', replyError);
+            }
         }
     }
 };

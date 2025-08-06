@@ -142,55 +142,72 @@ class ReminderSystem {
                 return;
             }
 
-            const config = this.client.configManager.getGuildConfig(guild.id);
-            if (!config) {
-                return; // Skip if no config
+            // Use database if available, otherwise fall back to config
+            let reminders = [];
+            if (this.client.configManager.initialized) {
+                reminders = this.client.configManager.getReminders(guild.id);
+            } else {
+                const config = this.client.configManager.getGuildConfig(guild.id);
+                if (!config) return; // Skip if no config
+                
+                const configReminders = config.reminders || {};
+                reminders = Object.entries(configReminders).map(([id, data]) => ({
+                    id,
+                    ...data,
+                    scheduled_time: data.datetime
+                }));
             }
             
-            const reminders = config.reminders || {};
-            
-            if (Object.keys(reminders).length === 0) {
+            if (reminders.length === 0) {
                 return; // Skip if no reminders
             }
 
-            for (const [reminderId, reminderData] of Object.entries(reminders)) {
+            for (const reminder of reminders) {
                 try {
-                    if (!reminderData || !reminderData.datetime) {
-                        console.warn(`⚠️ Invalid reminder data for ${reminderId} in ${guild.name}`);
+                    if (!reminder.scheduled_time) {
+                        console.warn(`⚠️ Invalid reminder data for ${reminder.id} in ${guild.name}`);
                         continue;
                     }
 
-                    const reminderDateTime = new Date(reminderData.datetime);
+                    const reminderDateTime = new Date(reminder.scheduled_time);
                     
                     // Skip invalid dates
                     if (isNaN(reminderDateTime.getTime())) {
-                        console.warn(`⚠️ Invalid reminder time for ${reminderId} in ${guild.name}`);
+                        console.warn(`⚠️ Invalid reminder time for ${reminder.id} in ${guild.name}`);
                         continue;
                     }
                     
                     // Skip past reminders
                     if (reminderDateTime <= now) {
-                        // Remove past reminders
-                        delete reminders[reminderId];
-                        config.reminders = reminders;
-                        this.client.configManager.setGuildConfig(guild.id, config);
-                        console.log(`🗑️ Removed past reminder ${reminderId} in ${guild.name}`);
+                        // Mark as sent in database or remove from config
+                        if (this.client.configManager.initialized) {
+                            this.client.configManager.markReminderSent(reminder.id);
+                        } else {
+                            const config = this.client.configManager.getGuildConfig(guild.id);
+                            delete config.reminders[reminder.id];
+                            this.client.configManager.setGuildConfig(guild.id, config);
+                        }
+                        console.log(`🗑️ Removed past reminder ${reminder.id} in ${guild.name}`);
                         continue;
                     }
 
                     // Check if we need to send the reminder (within 1 minute tolerance)
                     const timeDiff = Math.abs(reminderDateTime - reminderTime);
                     
-                    if (timeDiff <= 60000 && !this.hasReminderBeenSent(reminderId)) {
-                        await this.sendReminder(guild, reminderId, reminderData);
+                    if (timeDiff <= 60000 && !this.hasReminderBeenSent(reminder.id)) {
+                        await this.sendReminder(guild, reminder.id, reminder);
                         
-                        // Remove the reminder after sending
-                        delete reminders[reminderId];
-                        config.reminders = reminders;
-                        this.client.configManager.setGuildConfig(guild.id, config);
+                        // Mark as sent in database or remove from config
+                        if (this.client.configManager.initialized) {
+                            this.client.configManager.markReminderSent(reminder.id);
+                        } else {
+                            const config = this.client.configManager.getGuildConfig(guild.id);
+                            delete config.reminders[reminder.id];
+                            this.client.configManager.setGuildConfig(guild.id, config);
+                        }
                     }
                 } catch (reminderError) {
-                    console.error(`❌ Error processing reminder ${reminderId} in ${guild.name}:`, reminderError);
+                    console.error(`❌ Error processing reminder ${reminder.id} in ${guild.name}:`, reminderError);
                 }
             }
         } catch (error) {
@@ -236,12 +253,12 @@ class ReminderSystem {
      */
     async sendReminder(guild, reminderId, reminderData) {
         try {
-            if (!reminderData.channelId) {
+            if (!reminderData.channel_id) {
                 console.warn(`⚠️ Missing channel ID for reminder ${reminderId} in ${guild.name}`);
                 return;
             }
 
-            const channel = guild.channels.cache.get(reminderData.channelId);
+            const channel = guild.channels.cache.get(reminderData.channel_id);
             
             if (!channel) {
                 console.warn(`⚠️ Missing channel for reminder ${reminderId} in ${guild.name}`);
@@ -254,7 +271,7 @@ class ReminderSystem {
                 return;
             }
 
-            const reminderTime = new Date(reminderData.datetime);
+            const reminderTime = new Date(reminderData.scheduled_time);
             const timestamp = Math.floor(reminderTime.getTime() / 1000);
             const courseEmoji = this.getCourseEmoji(reminderData.courseCode);
 
@@ -268,7 +285,7 @@ class ReminderSystem {
 
             const embed = new EmbedBuilder()
                 .setTitle(`${courseEmoji} Recordatorio de Clase`)
-                .setDescription(`**${reminderData.courseName}**`)
+                .setDescription(`**${reminderData.courseName || 'Clase programada'}**`)
                 .setColor(0x00FF00) // Green
                 .addFields(
                     {
@@ -284,10 +301,10 @@ class ReminderSystem {
                 )
                 .setTimestamp();
 
-            if (reminderData.description) {
+            if (reminderData.message) {
                 embed.addFields({
                     name: '📝 Descripción',
-                    value: reminderData.description,
+                    value: reminderData.message,
                     inline: false
                 });
             }
