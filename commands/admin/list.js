@@ -59,16 +59,15 @@ module.exports = {
 async function handleListCommissions(interaction) {
     const courseFilter = interaction.options.getString('curso')?.toUpperCase();
 
-    const config = interaction.client.configManager.getGuildConfig(interaction.guild.id);
-    const commissions = config.commissions || {};
-    const courses = config.courses || {};
+    const commissions = interaction.client.configManager.getEducationalCommissions(interaction.guild.id);
+    const courses = interaction.client.configManager.getCourses(interaction.guild.id);
 
-    let filteredCommissions = Object.entries(commissions);
+    let filteredCommissions = commissions;
 
     // Apply course filter if provided
     if (courseFilter) {
-        filteredCommissions = filteredCommissions.filter(([code, data]) => 
-            data.courseCode === courseFilter
+        filteredCommissions = filteredCommissions.filter(commission => 
+            commission.course_code === courseFilter
         );
     }
 
@@ -92,11 +91,11 @@ async function handleListCommissions(interaction) {
 
     // Group commissions by course
     const commissionsByCourse = {};
-    filteredCommissions.forEach(([code, data]) => {
-        if (!commissionsByCourse[data.courseCode]) {
-            commissionsByCourse[data.courseCode] = [];
+    filteredCommissions.forEach(commission => {
+        if (!commissionsByCourse[commission.course_code]) {
+            commissionsByCourse[commission.course_code] = [];
         }
-        commissionsByCourse[data.courseCode].push({ code, ...data });
+        commissionsByCourse[commission.course_code].push(commission);
     });
 
     // Create main embed
@@ -115,16 +114,17 @@ async function handleListCommissions(interaction) {
 
     // Add fields for each course
     Object.entries(commissionsByCourse).forEach(([courseCode, courseCommissions]) => {
-        const courseName = courses[courseCode]?.name || `Curso ${courseCode}`;
+        const courseData = courses.find(course => course.course_name.toLowerCase().includes(courseCode.toLowerCase()));
+        const courseName = courseData ? courseData.course_name : `Curso ${courseCode}`;
         
         const commissionList = courseCommissions
-            .sort((a, b) => a.code.localeCompare(b.code))
+            .sort((a, b) => a.commission_code.localeCompare(b.commission_code))
             .map(commission => {
-                const role = interaction.guild.roles.cache.get(commission.roleId);
-                const textChannel = interaction.guild.channels.cache.get(commission.textChannelId);
+                const role = interaction.guild.roles.cache.get(commission.role_id);
+                const textChannel = interaction.guild.channels.cache.get(commission.text_channel_id);
                 const memberCount = role ? role.members.size : 0;
                 
-                return `**${commission.code}** - ${getShiftName(commission.shift)} (${memberCount} miembros)\n` +
+                return `**${commission.commission_code}** - ${getShiftName(commission.shift)} (${memberCount} miembros)\n` +
                        `${textChannel ? `📝 ${textChannel}` : '❌ Canal no encontrado'}`;
             })
             .join('\n\n');
@@ -137,8 +137,8 @@ async function handleListCommissions(interaction) {
     });
 
     // Add summary field
-    const totalMembers = filteredCommissions.reduce((total, [code, data]) => {
-        const role = interaction.guild.roles.cache.get(data.roleId);
+    const totalMembers = filteredCommissions.reduce((total, commission) => {
+        const role = interaction.guild.roles.cache.get(commission.role_id);
         return total + (role ? role.members.size : 0);
     }, 0);
 

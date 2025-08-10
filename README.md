@@ -4,8 +4,13 @@ Un bot de Discord modular y completo diseñado para comunidades educativas, con 
 
 ## 🎵 Sistema de Canales de Voz Dinámicos
 
-### Comandos de Configuración
-- `/configuracion voz [canal] [nombre-plantilla] [limite-usuarios]` - Configura el sistema de canales dinámicos
+### Configuración
+El sistema de canales de voz dinámicos ahora se configura mediante variables de entorno:
+- `DYNAMIC_VOICE_TRIGGER_CHANNEL_ID` - ID del canal que activa la creación de canales dinámicos
+- `DYNAMIC_VOICE_NAME_TEMPLATE` - Plantilla para el nombre de los canales (usa {usuario})
+- `DYNAMIC_VOICE_USER_LIMIT` - Límite de usuarios por canal (0 = sin límite)
+
+### Comandos de Estado
 - `/estado voz` - Muestra la configuración actual
 
 ### Funcionalidad Principal
@@ -40,7 +45,14 @@ Un bot de Discord modular y completo diseñado para comunidades educativas, con 
 - **Emojis por curso**: Cada curso tiene su emoji distintivo en los recordatorios
 
 ### Sistema de Verificación
-- `/configuracion verificacion` - Configura el sistema de verificación (Solo Admins)
+El sistema de verificación se configura mediante variables de entorno:
+- `VERIFICATION_CHANNEL_ID` - ID del canal donde aparecerá el mensaje de verificación
+- `VERIFIED_ROLE_ID` - ID del rol que se otorga a los usuarios verificados
+- `VERIFICATION_ENABLED` - Activar/desactivar el sistema (true/false)
+
+**Nota:** Los textos del sistema de verificación (título, descripción, botón) se configuran en `data/embedStrings.js` y pueden ser personalizados usando el comando `/configuracion textos`.
+
+### Comandos de Verificación
 - `/enviar-verificacion` - Envía el mensaje de verificación (Solo Admins)
 - `/estado verificacion` - Muestra el estado del sistema (Solo Admins)
 - **Verificación automática**: Los nuevos miembros deben verificarse para acceder
@@ -49,14 +61,18 @@ Un bot de Discord modular y completo diseñado para comunidades educativas, con 
 - **Logging**: Registro de verificaciones en canal de moderación
 
 ### Comandos de Administración
-- `/configuracion bot` - Configura canales, roles y enlaces del bot (Solo Admins)
 - `/estado bot` - Muestra la configuración actual del bot (Solo Admins)
-- `/configuracion roles` - Configura roles de identidad y pronombres (Solo Admins)
 - `/configuracion textos` - Personaliza los textos y mensajes del bot (Solo Admins)
 - `/crear-comision [codigo]` - Crea una nueva comisión con canales y rol (Solo Admins)
 - `/agregar-curso [codigo] [nombre]` - Agrega un nuevo curso a la base de datos (Solo Admins)
 - `/listar comisiones` - Muestra todas las comisiones existentes (Solo Admins)
 - `/listar cursos` - Muestra todos los cursos registrados (Solo Admins)
+
+### Configuración del Bot
+La configuración del bot ahora se maneja mediante variables de entorno:
+- **Canales**: `MODERATION_CHANNEL_ID`, `SUPPORT_CHANNEL_ID`, `DOUBTS_CHANNEL_ID`, `ANNOUNCEMENTS_CHANNEL_ID`
+- **Roles**: `STAFF_ROLE_ID`, `ADMIN_ROLE_ID`, `MODERATOR_ROLE_ID`
+- **Enlaces**: `FEEDBACK_FORM_URL`, `GUIDELINES_URL`
 
 ### Comandos de Comunidad
 - `/hola` - Mensaje de bienvenida (Solo Admins)
@@ -80,6 +96,51 @@ Un bot de Discord modular y completo diseñado para comunidades educativas, con 
 - `/silenciar [usuario] [tiempo] [motivo]` - Silencia temporalmente a un usuario
 - `/reporte [usuario] [motivo]` - Reporta a un usuario
 
+## 🔄 Migración de Configuración
+
+### Cambios Recientes
+El bot ha migrado de configuración dinámica a variables de entorno para mayor estabilidad y facilidad de mantenimiento.
+
+#### Comandos Eliminados
+- `/configuracion bot canales` - Ahora usa variables de entorno
+- `/configuracion roles staff` - Ahora usa variables de entorno  
+- `/configuracion roles verificacion` - Ahora usa variables de entorno
+- `/configuracion voz configurar` - Ahora usa variables de entorno
+
+#### Nuevas Variables de Entorno
+Todas las configuraciones ahora se manejan mediante variables de entorno en el archivo `.env`:
+- Configuración de canales del bot
+- Roles de staff y moderación
+- Sistema de verificación
+- Canales de voz dinámicos
+- Enlaces externos
+
+### Ventajas de la Migración
+- **Mayor estabilidad**: No más pérdida de configuración al reiniciar
+- **Fácil respaldo**: Configuración en archivo de texto
+- **Control de versiones**: Configuración versionada con Git
+- **Despliegue simplificado**: Configuración consistente entre entornos
+
+### Reseteo de Base de Datos
+Después de la migración, es recomendable resetear la base de datos para limpiar los datos de configuración obsoletos:
+
+#### Opción 1: PowerShell Script (Recomendado)
+```powershell
+.\scripts\reset-database.ps1
+```
+
+#### Opción 2: Node.js Script
+```bash
+node scripts/reset-database.js
+```
+
+Estos scripts:
+- Crean un respaldo de la base de datos actual
+- Eliminan las tablas de configuración obsoletas
+- Preservan datos esenciales (cursos, recordatorios, textos personalizados)
+- Validan las variables de entorno
+- Inicializan la nueva estructura de base de datos
+
 ## 🛠️ Instalación
 
 ### Prerrequisitos
@@ -96,7 +157,16 @@ npm install discord.js @discordjs/voice dotenv node-cron
 
 1. Clona el repositorio
 2. Instala las dependencias: `npm install`
-3. Copia `.env.example` a `.env` y configura las variables:
+3. Configura las variables de entorno:
+
+#### Opción 1: Configuración Automática (Recomendada)
+Ejecuta el script de configuración interactiva:
+```powershell
+.\scripts\setup-environment.ps1
+```
+
+#### Opción 2: Configuración Manual
+Copia `.env.example` a `.env` y configura las variables:
 
 ```env
 # Discord Bot Configuration (REQUIRED)

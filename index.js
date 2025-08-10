@@ -19,9 +19,12 @@ const ReminderSystem = require('./utils/reminderSystem');
 function validateEnvironment() {
     const requiredEnvVars = ['DISCORD_TOKEN', 'CLIENT_ID', 'GUILD_ID'];
     const optionalEnvVars = [
-        'MODERATION_CHANNEL_ID', 'SUPPORT_CHANNEL_ID', 'SUPPORT_STAFF_ROLE_ID',
+        'MODERATION_CHANNEL_ID', 'SUPPORT_CHANNEL_ID', 'STAFF_ROLE_ID',
         'ADMIN_ROLE_ID', 'MODERATOR_ROLE_ID', 'FEEDBACK_FORM_URL',
-        'DOUBTS_CHANNEL_ID', 'ANNOUNCEMENTS_CHANNEL_ID'
+        'DOUBTS_CHANNEL_ID', 'ANNOUNCEMENTS_CHANNEL_ID',
+        'VERIFICATION_CHANNEL_ID', 'VERIFIED_ROLE_ID', 'VERIFICATION_ENABLED',
+        'DYNAMIC_VOICE_TRIGGER_CHANNEL_ID', 'DYNAMIC_VOICE_NAME_TEMPLATE', 'DYNAMIC_VOICE_USER_LIMIT',
+        'GUIDELINES_URL'
     ];
     
     const missingRequired = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -73,6 +76,10 @@ client.configManager = new ConfigManager(client);
 
 // Reminder system
 client.reminderSystem = new ReminderSystem(client);
+
+// Debug manager
+const { DebugManager } = require('./utils/debugManager');
+client.debugManager = new DebugManager(client);
 
 // Dynamic voice channel configuration
 client.dynamicVoiceConfig = new Map();

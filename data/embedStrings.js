@@ -702,7 +702,7 @@ const embedStrings = {
             dynamicVoiceHelp: '💡 Únete al canal activador para crear automáticamente tu propio canal de voz temporal.',
             verificationSuccess: (roleName) => `✅ ¡Verificación completada! Ahora tienes el rol **${roleName}**.`
         },
-        success: {
+        verification: {
             verificationSent: (channel) => `✅ Mensaje de verificación enviado a ${channel}.`,
             userVerified: (userTag, roleName) => `✅ **${userTag}** ha sido verificado y recibió el rol **${roleName}**.`
         }

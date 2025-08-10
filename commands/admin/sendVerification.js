@@ -28,8 +28,7 @@ module.exports = {
             });
         }
 
-        const config = interaction.client.configManager.getGuildConfig(interaction.guild.id);
-        const verificationConfig = config.verification;
+        const verificationConfig = interaction.client.configManager.getVerificationConfig(interaction.guild.id);
 
         if (!verificationConfig || !verificationConfig.enabled) {
             return interaction.reply({
@@ -110,7 +109,7 @@ module.exports = {
             });
 
             await interaction.reply({
-                content: embedStrings.messages.success.verificationSent(channel),
+                content: embedStrings.messages.verification.verificationSent(channel),
                 ephemeral: true
             });
 

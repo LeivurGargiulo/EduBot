@@ -124,7 +124,7 @@ class ConfigManager {
      * @returns {string|null}
      */
     getStaffRoleId(guildId) {
-        return this.getConfigValue(guildId, 'staffRoleId', 'SUPPORT_STAFF_ROLE_ID');
+        return this.getConfigValue(guildId, 'staffRoleId', 'STAFF_ROLE_ID');
     }
 
     /**
@@ -164,6 +164,117 @@ class ConfigManager {
     }
 
     /**
+     * Get verification channel ID from environment
+     * @param {string} guildId 
+     * @returns {string|null}
+     */
+    getVerificationChannelId(guildId) {
+        // If database is not initialized, return environment variable directly
+        if (!this.initialized) {
+            return process.env.VERIFICATION_CHANNEL_ID || null;
+        }
+        return this.getConfigValue(guildId, 'verification.channelId', 'VERIFICATION_CHANNEL_ID');
+    }
+
+    /**
+     * Get verified role ID from environment
+     * @param {string} guildId 
+     * @returns {string|null}
+     */
+    getVerifiedRoleId(guildId) {
+        // If database is not initialized, return environment variable directly
+        if (!this.initialized) {
+            return process.env.VERIFIED_ROLE_ID || null;
+        }
+        return this.getConfigValue(guildId, 'verification.roleId', 'VERIFIED_ROLE_ID');
+    }
+
+    /**
+     * Get verification title from embed strings
+     * @param {string} guildId 
+     * @returns {string}
+     */
+    getVerificationTitle(guildId) {
+        const embedStrings = require('../data/embedStrings');
+        // If database is not initialized, return default from embed strings
+        if (!this.initialized) {
+            return embedStrings.verification.defaultTitle;
+        }
+        return this.getCustomText(guildId, 'verification', 'title', embedStrings.verification.defaultTitle);
+    }
+
+    /**
+     * Get verification description from embed strings
+     * @param {string} guildId 
+     * @returns {string}
+     */
+    getVerificationDescription(guildId) {
+        const embedStrings = require('../data/embedStrings');
+        // If database is not initialized, return default from embed strings
+        if (!this.initialized) {
+            return embedStrings.verification.defaultDescription;
+        }
+        return this.getCustomText(guildId, 'verification', 'description', embedStrings.verification.defaultDescription);
+    }
+
+    /**
+     * Get verification button text from embed strings
+     * @param {string} guildId 
+     * @returns {string}
+     */
+    getVerificationButtonText(guildId) {
+        const embedStrings = require('../data/embedStrings');
+        // If database is not initialized, return default from embed strings
+        if (!this.initialized) {
+            return embedStrings.verification.buttonText;
+        }
+        return this.getCustomText(guildId, 'verification', 'buttonText', embedStrings.verification.buttonText);
+    }
+
+    /**
+     * Get verification enabled status from environment
+     * @param {string} guildId 
+     * @returns {boolean}
+     */
+    isVerificationEnabledFromEnv(guildId) {
+        // If database is not initialized, return environment variable directly
+        if (!this.initialized) {
+            const enabled = process.env.VERIFICATION_ENABLED;
+            return enabled === 'true' || enabled === true;
+        }
+        const enabled = this.getConfigValue(guildId, 'verification.enabled', 'VERIFICATION_ENABLED');
+        return enabled === 'true' || enabled === true;
+    }
+
+    /**
+     * Get dynamic voice trigger channel ID from environment
+     * @param {string} guildId 
+     * @returns {string|null}
+     */
+    getDynamicVoiceTriggerChannelId(guildId) {
+        return this.getConfigValue(guildId, 'dynamicVoice.triggerChannelId', 'DYNAMIC_VOICE_TRIGGER_CHANNEL_ID');
+    }
+
+    /**
+     * Get dynamic voice name template from environment
+     * @param {string} guildId 
+     * @returns {string|null}
+     */
+    getDynamicVoiceNameTemplate(guildId) {
+        return this.getConfigValue(guildId, 'dynamicVoice.nameTemplate', 'DYNAMIC_VOICE_NAME_TEMPLATE');
+    }
+
+    /**
+     * Get dynamic voice user limit from environment
+     * @param {string} guildId 
+     * @returns {number}
+     */
+    getDynamicVoiceUserLimit(guildId) {
+        const limit = this.getConfigValue(guildId, 'dynamicVoice.userLimit', 'DYNAMIC_VOICE_USER_LIMIT');
+        return limit ? parseInt(limit) : 0;
+    }
+
+    /**
      * Get identity role ID
      * @param {string} guildId 
      * @param {string} roleType 
@@ -194,8 +305,30 @@ class ConfigManager {
      * @returns {Object|null}
      */
     getVerificationConfig(guildId) {
+        // If database is not initialized, return basic config with embed strings
+        if (!this.initialized) {
+            return {
+                channelId: this.getVerificationChannelId(guildId),
+                roleId: this.getVerifiedRoleId(guildId),
+                title: this.getVerificationTitle(guildId),
+                description: this.getVerificationDescription(guildId),
+                buttonText: this.getVerificationButtonText(guildId),
+                enabled: this.isVerificationEnabledFromEnv(guildId)
+            };
+        }
+        
         const config = this.getGuildConfig(guildId);
-        return config.verification || null;
+        const dbConfig = config.verification || {};
+        
+        // Merge with environment variables and embed strings
+        return {
+            channelId: dbConfig.channelId || this.getVerificationChannelId(guildId),
+            roleId: dbConfig.roleId || this.getVerifiedRoleId(guildId),
+            title: this.getVerificationTitle(guildId),
+            description: this.getVerificationDescription(guildId),
+            buttonText: this.getVerificationButtonText(guildId),
+            enabled: dbConfig.enabled !== undefined ? dbConfig.enabled : this.isVerificationEnabledFromEnv(guildId)
+        };
     }
 
     /**
@@ -205,7 +338,9 @@ class ConfigManager {
      */
     isVerificationEnabled(guildId) {
         const verificationConfig = this.getVerificationConfig(guildId);
-        return verificationConfig && verificationConfig.enabled;
+        const fromConfig = verificationConfig && verificationConfig.enabled;
+        const fromEnv = this.isVerificationEnabledFromEnv(guildId);
+        return fromConfig || fromEnv;
     }
 
     /**
@@ -327,6 +462,61 @@ class ConfigManager {
     markReminderSent(reminderId) {
         if (!this.initialized) return false;
         return this.dbManager.markReminderSent(reminderId);
+    }
+
+    /**
+     * Get educational commission by code
+     * @param {string} guildId 
+     * @param {string} commissionCode 
+     * @returns {Object|null}
+     */
+    getEducationalCommission(guildId, commissionCode) {
+        if (!this.initialized) return null;
+        return this.dbManager.getEducationalCommission(guildId, commissionCode);
+    }
+
+    /**
+     * Get all educational commissions for a guild
+     * @param {string} guildId 
+     * @returns {Array}
+     */
+    getEducationalCommissions(guildId) {
+        if (!this.initialized) return [];
+        return this.dbManager.getEducationalCommissions(guildId);
+    }
+
+    /**
+     * Add educational commission
+     * @param {string} guildId 
+     * @param {Object} commissionData 
+     * @returns {number|null} Commission ID
+     */
+    addEducationalCommission(guildId, commissionData) {
+        if (!this.initialized) return null;
+        return this.dbManager.addEducationalCommission(guildId, commissionData);
+    }
+
+    /**
+     * Update educational commission
+     * @param {string} guildId 
+     * @param {string} commissionCode 
+     * @param {Object} commissionData 
+     * @returns {boolean}
+     */
+    updateEducationalCommission(guildId, commissionCode, commissionData) {
+        if (!this.initialized) return false;
+        return this.dbManager.updateEducationalCommission(guildId, commissionCode, commissionData);
+    }
+
+    /**
+     * Delete educational commission
+     * @param {string} guildId 
+     * @param {string} commissionCode 
+     * @returns {boolean}
+     */
+    deleteEducationalCommission(guildId, commissionCode) {
+        if (!this.initialized) return false;
+        return this.dbManager.deleteEducationalCommission(guildId, commissionCode);
     }
 
     /**

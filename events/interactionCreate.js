@@ -98,6 +98,15 @@ async function handleSlashCommand(interaction) {
             console.warn(`⚠️ Slow command execution: /${command.data.name} took ${executionTime}ms`);
         }
         
+        // Record in debug manager if available
+        if (interaction.client.debugManager) {
+            interaction.client.debugManager.logCommandExecution(command.data.name, executionTime, true, {
+                user: interaction.user,
+                guild: interaction.guild,
+                channel: interaction.channel
+            });
+        }
+        
     } catch (error) {
         const executionTime = Date.now() - startTime;
         console.error(`❌ Error executing ${command.data.name} (${executionTime}ms):`, {
@@ -107,6 +116,21 @@ async function handleSlashCommand(interaction) {
             guild: interaction.guild?.name,
             timestamp: new Date().toISOString()
         });
+        
+        // Record error in debug manager if available
+        if (interaction.client.debugManager) {
+            interaction.client.debugManager.logError(error, {
+                user: interaction.user,
+                guild: interaction.guild,
+                channel: interaction.channel,
+                command: command
+            });
+            interaction.client.debugManager.logCommandExecution(command.data.name, executionTime, false, {
+                user: interaction.user,
+                guild: interaction.guild,
+                channel: interaction.channel
+            });
+        }
         
         // Send user-friendly error message
         const errorMessage = getErrorMessage(error);
@@ -449,25 +473,33 @@ async function handleTicketInteraction(interaction, type, threadId) {
         // Check permissions
         if (!interaction.member.roles.cache.has(supportRoleId) && 
             !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-            return await interaction.reply({
-                content: embedStrings.messages.errors.noPermission,
-                ephemeral: true
-            });
+            if (!interaction.replied && !interaction.deferred) {
+                return await interaction.reply({
+                    content: embedStrings.messages.errors.noPermission,
+                    ephemeral: true
+                });
+            }
+            return;
         }
 
         const thread = interaction.channel;
         if (thread.id !== threadId) {
-            return await interaction.reply({ 
-                content: embedStrings.messages.errors.invalidAction, 
-                ephemeral: true 
-            });
+            if (!interaction.replied && !interaction.deferred) {
+                return await interaction.reply({ 
+                    content: embedStrings.messages.errors.invalidAction, 
+                    ephemeral: true 
+                });
+            }
+            return;
         }
 
         if (type === 'close') {
-            await interaction.reply({ 
-                content: embedStrings.messages.success.ticketClosing, 
-                ephemeral: false 
-            });
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({ 
+                    content: embedStrings.messages.success.ticketClosing, 
+                    ephemeral: false 
+                });
+            }
             
             setTimeout(async () => {
                 try {
@@ -475,17 +507,23 @@ async function handleTicketInteraction(interaction, type, threadId) {
                     await thread.setArchived(true);
                 } catch (error) {
                     console.error('Error closing ticket:', error);
-                    await interaction.followUp({ 
-                        content: embedStrings.messages.errors.ticketArchiveError, 
-                        ephemeral: true 
-                    });
+                    try {
+                        await interaction.followUp({ 
+                            content: embedStrings.messages.errors.ticketArchiveError, 
+                            ephemeral: true 
+                        });
+                    } catch (followUpError) {
+                        console.error('❌ Failed to send follow-up error:', followUpError);
+                    }
                 }
             }, 5000);
         }
     } catch (error) {
         console.error('❌ Error in ticket interaction:', error);
         try {
-            await sendErrorResponse(interaction, 'Error al procesar la acción del ticket.');
+            if (!interaction.replied && !interaction.deferred) {
+                await sendErrorResponse(interaction, 'Error al procesar la acción del ticket.');
+            }
         } catch (sendError) {
             console.error('❌ Failed to send error response:', sendError);
         }
@@ -500,8 +538,7 @@ async function handleTicketInteraction(interaction, type, threadId) {
 async function handleVerificationInteraction(interaction, type) {
     try {
         if (type === 'user') {
-            const config = interaction.client.configManager.getGuildConfig(interaction.guild.id);
-            const verificationConfig = config.verification;
+            const verificationConfig = interaction.client.configManager.getVerificationConfig(interaction.guild.id);
 
             if (!verificationConfig || !verificationConfig.enabled) {
                 return await interaction.reply({

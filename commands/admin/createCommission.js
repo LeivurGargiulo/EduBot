@@ -45,8 +45,13 @@ module.exports = {
         const parsedCode = parseCommissionCode(commissionCode);
 
         try {
+            // Initialize guild config if not already done
+            console.log(`🏛️  Initializing guild config for ${interaction.guild.name} (${interaction.guild.id})...`);
+            interaction.client.configManager.initializeGuildConfig(interaction.guild.id);
+            console.log('✅ Guild config initialized');
+            
             // Check if commission already exists
-            const existingCommission = getCommissionData(interaction.client, interaction.guild.id, commissionCode);
+            const existingCommission = interaction.client.configManager.getEducationalCommission(interaction.guild.id, commissionCode);
             if (existingCommission) {
                 return interaction.reply({
                     content: embedStrings.messages.errors.commissionAlreadyExists(commissionCode),
@@ -55,9 +60,10 @@ module.exports = {
             }
 
             // Check if course exists in database
-            const courseData = getCourseData(interaction.client, interaction.guild.id, parsedCode.courseCode);
+            const courses = interaction.client.configManager.getCourses(interaction.guild.id);
+            const courseData = courses.find(course => course.course_name.toLowerCase().includes(parsedCode.courseCode.toLowerCase()));
             // If course doesn't exist, we'll use the commission code as the course name
-            const courseName = courseData ? courseData.name : `Curso ${parsedCode.courseCode}`;
+            const courseName = courseData ? courseData.course_name : `Curso ${parsedCode.courseCode}`;
 
             await interaction.deferReply();
 
@@ -88,7 +94,6 @@ module.exports = {
                 name: `${commissionCode.toLowerCase()}-general`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-                topic: `Canal principal de la comisión ${commissionCode} - ${courseName} - Para dudas generales y conversación`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -113,11 +118,14 @@ module.exports = {
                 name: `${commissionCode.toLowerCase()}-anuncios`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-                topic: `Canal de anuncios de la comisión ${commissionCode} - ${courseName} - Solo para anuncios del staff`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel]
+                        deny: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.AddReactions
+                        ]
                     },
                     {
                         id: commissionRole.id,
@@ -129,10 +137,6 @@ module.exports = {
                             PermissionFlagsBits.SendMessages,
                             PermissionFlagsBits.AddReactions
                         ]
-                    },
-                    {
-                        id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.AddReactions]
                     }
                 ],
                 reason: `Canal de anuncios para comisión ${commissionCode}`
@@ -143,7 +147,6 @@ module.exports = {
                 name: `${commissionCode.toLowerCase()}-charla`,
                 type: ChannelType.GuildText,
                 parent: category.id,
-                topic: `Canal de charla libre de la comisión ${commissionCode} - ${courseName} - Para socializar y temas off-topic`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -163,12 +166,12 @@ module.exports = {
                 reason: `Canal de charla libre para comisión ${commissionCode}`
             });
 
-            // Create voice channel (for classes or oral discussions)
+            // Create voice channel (for classes or voice discussions)
+            console.log(`🔊 Creating voice channel for commission ${commissionCode}...`);
             const voiceChannel = await interaction.guild.channels.create({
                 name: `🔊 ${commissionCode.toLowerCase()}`,
                 type: ChannelType.GuildVoice,
                 parent: category.id,
-                topic: `Canal de voz para clases y charlas orales de la comisión ${commissionCode} - ${courseName}`,
                 permissionOverwrites: [
                     {
                         id: interaction.guild.roles.everyone.id,
@@ -186,9 +189,12 @@ module.exports = {
                 ],
                 reason: `Canal de voz para comisión ${commissionCode}`
             });
+            console.log(`✅ Voice channel created: ${voiceChannel.name} (${voiceChannel.id})`);
 
-            // Save commission to database/config
-            saveCommissionData(interaction.client, interaction.guild.id, commissionCode, {
+            // Save commission to database
+            console.log(`💾 Saving commission ${commissionCode} to database...`);
+            const commissionData = {
+                commissionCode: commissionCode,
                 courseCode: parsedCode.courseCode,
                 courseName: courseName,
                 shift: parsedCode.shift,
@@ -198,9 +204,17 @@ module.exports = {
                 notificationsChannelId: notificationsChannel.id,
                 chatChannelId: chatChannel.id,
                 voiceChannelId: voiceChannel.id,
-                createdAt: new Date().toISOString(),
                 createdBy: interaction.user.id
-            });
+            };
+
+            console.log('📋 Commission data:', JSON.stringify(commissionData, null, 2));
+
+            const commissionId = interaction.client.configManager.addEducationalCommission(interaction.guild.id, commissionData);
+            if (!commissionId) {
+                console.log('❌ Database save failed - no commission ID returned');
+                throw new Error('Failed to save commission to database');
+            }
+            console.log(`✅ Commission saved to database with ID: ${commissionId}`);
 
             // Send welcome message to the main text channel
             const welcomeEmbed = new EmbedBuilder()
@@ -302,8 +316,29 @@ module.exports = {
             
             let errorMessage = '❌ Error al crear la comisión. ';
             
-            // Provide more specific error messages
-            if (error.code === 50013) {
+            // Check if this is a database error after channels were created
+            if (error.message.includes('Failed to save commission to database') || 
+                error.message.includes('FOREIGN KEY constraint failed') ||
+                error.message.includes('SQLITE_CONSTRAINT_FOREIGNKEY')) {
+                
+                errorMessage += 'Los canales se crearon correctamente, pero hubo un error al guardar en la base de datos. ';
+                errorMessage += 'Los canales pueden necesitar ser eliminados manualmente. ';
+                errorMessage += 'Contacta a un administrador para resolver este problema.';
+                
+                // Log the created resources for cleanup
+                console.log('⚠️  Channels created but database save failed. Created resources:');
+                if (typeof commissionRole !== 'undefined') console.log(`- Role: ${commissionRole.name} (${commissionRole.id})`);
+                if (typeof textChannel !== 'undefined') console.log(`- Text Channel: ${textChannel.name} (${textChannel.id})`);
+                if (typeof notificationsChannel !== 'undefined') console.log(`- Notifications Channel: ${notificationsChannel.name} (${notificationsChannel.id})`);
+                if (typeof chatChannel !== 'undefined') console.log(`- Chat Channel: ${chatChannel.name} (${chatChannel.id})`);
+                if (typeof voiceChannel !== 'undefined') console.log(`- Voice Channel: ${voiceChannel.name} (${voiceChannel.id})`);
+                
+            } else if (error.code === 50035) {
+                errorMessage += 'Error en el contenido del canal. Discord ha rechazado el texto del tema del canal. ';
+                errorMessage += 'Intenta crear la comisión nuevamente.';
+                console.log('❌ Discord API Error 50035: Invalid channel topic content');
+                
+            } else if (error.code === 50013) {
                 errorMessage += 'El bot no tiene permisos suficientes. Verifica que tenga permisos de "Gestionar Canales", "Gestionar Roles" y "Ver Canales".';
             } else if (error.code === 50001) {
                 errorMessage += 'No se puede acceder al canal. Verifica que el bot tenga permisos para ver y gestionar canales.';
@@ -380,47 +415,7 @@ function parseCommissionCode(code) {
     };
 }
 
-/**
- * Get commission data from storage
- * @param {Client} client 
- * @param {string} guildId 
- * @param {string} code 
- * @returns {Object|null}
- */
-function getCommissionData(client, guildId, code) {
-    const config = client.configManager.getGuildConfig(guildId);
-    const commissions = config.commissions || {};
-    return commissions[code] || null;
-}
 
-/**
- * Save commission data to storage
- * @param {Client} client 
- * @param {string} guildId 
- * @param {string} code 
- * @param {Object} data 
- */
-function saveCommissionData(client, guildId, code, data) {
-    const config = client.configManager.getGuildConfig(guildId);
-    if (!config.commissions) {
-        config.commissions = {};
-    }
-    config.commissions[code] = data;
-    client.configManager.setGuildConfig(guildId, config);
-}
-
-/**
- * Get course data from storage
- * @param {Client} client 
- * @param {string} guildId 
- * @param {string} courseCode 
- * @returns {Object|null}
- */
-function getCourseData(client, guildId, courseCode) {
-    const config = client.configManager.getGuildConfig(guildId);
-    const courses = config.courses || {};
-    return courses[courseCode] || null;
-}
 
 /**
  * Get commission color based on course

@@ -7,6 +7,9 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "test-db": "node scripts/test-database.js",
+    "test-db-ops": "node scripts/test-database-operations.js",
+    "test-bot": "powershell -ExecutionPolicy Bypass -File scripts/test-bot-functionality.ps1",
+    "test-bot-verbose": "powershell -ExecutionPolicy Bypass -File scripts/test-bot-functionality.ps1",
     "db-info": "powershell -ExecutionPolicy Bypass -File scripts/manage-database.ps1 -Action info",
     "db-backup": "powershell -ExecutionPolicy Bypass -File scripts/manage-database.ps1 -Action backup",
     "db-cleanup": "powershell -ExecutionPolicy Bypass -File scripts/manage-database.ps1 -Action cleanup"

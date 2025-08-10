@@ -38,19 +38,16 @@ module.exports = {
 
         try {
             // Check if commission exists in database/config
-            const commission = getCommissionData(interaction.client, interaction.guild.id, commissionCode);
-            if (!commission) {
-                return interaction.reply({
-                    content: embedStrings.messages.errors.commissionNotFound(commissionCode),
-                    ephemeral: true
-                });
-            }
+                    const commission = interaction.client.configManager.getEducationalCommission(interaction.guild.id, commissionCode);
+        if (!commission) {
+            return interaction.reply({
+                content: embedStrings.messages.errors.commissionNotFound(commissionCode),
+                ephemeral: true
+            });
+        }
 
             // Find the commission role
-            const commissionRole = interaction.guild.roles.cache.find(role => 
-                role.name.toUpperCase() === commissionCode
-            );
-
+            const commissionRole = interaction.guild.roles.cache.get(commission.role_id);
             if (!commissionRole) {
                 return interaction.reply({
                     content: embedStrings.messages.errors.commissionRoleNotFound(commissionCode),
@@ -73,13 +70,13 @@ module.exports = {
             // Create success embed
             const successEmbed = new EmbedBuilder()
                 .setTitle(embedStrings.commission.joined.title)
-                .setDescription(embedStrings.commission.joined.description(commissionCode, commission.courseName))
+                .setDescription(embedStrings.commission.joined.description(commissionCode, commission.course_name))
                 .setColor(embedStrings.colors.success)
                 .addFields(
                     {
                         name: embedStrings.commission.joined.fields.details.name,
                         value: embedStrings.commission.joined.fields.details.value(
-                            commission.courseName,
+                            commission.course_name,
                             getShiftName(commission.shift),
                             commission.number
                         ),
@@ -128,7 +125,7 @@ module.exports = {
                         .addFields(
                             { name: 'Usuario', value: `${member.user.tag} (${member.user.id})`, inline: true },
                             { name: 'Comisión', value: commissionCode, inline: true },
-                            { name: 'Curso', value: commission.courseName, inline: true },
+                            { name: 'Curso', value: commission.course_name, inline: true },
                             { name: 'Fecha', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true }
                         )
                         .setThumbnail(member.user.displayAvatarURL())
@@ -185,18 +182,7 @@ function validateCommissionCode(code) {
     return { valid: true };
 }
 
-/**
- * Get commission data from storage
- * @param {Client} client 
- * @param {string} guildId 
- * @param {string} code 
- * @returns {Object|null}
- */
-function getCommissionData(client, guildId, code) {
-    const config = client.configManager.getGuildConfig(guildId);
-    const commissions = config.commissions || {};
-    return commissions[code] || null;
-}
+
 
 /**
  * Get shift name in Spanish

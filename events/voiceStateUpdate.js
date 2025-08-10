@@ -16,9 +16,29 @@ module.exports = {
     async execute(oldState, newState) {
         try {
             const guild = newState.guild;
-            const config = newState.client.dynamicVoiceConfig?.get(guild.id);
             
-            if (!config) return;
+            // Get configuration from environment variables
+            const triggerChannelId = newState.client.configManager.getDynamicVoiceTriggerChannelId(guild.id);
+            const nameTemplate = newState.client.configManager.getDynamicVoiceNameTemplate(guild.id);
+            const userLimit = newState.client.configManager.getDynamicVoiceUserLimit(guild.id);
+            
+            if (!triggerChannelId) return;
+
+            // Initialize dynamic voice config if not exists
+            if (!newState.client.dynamicVoiceConfig) {
+                newState.client.dynamicVoiceConfig = new Map();
+            }
+            
+            let config = newState.client.dynamicVoiceConfig.get(guild.id);
+            if (!config) {
+                config = {
+                    triggerChannelId: triggerChannelId,
+                    nameTemplate: nameTemplate || 'Canal de {usuario}',
+                    userLimit: userLimit || 0,
+                    createdChannels: new Set()
+                };
+                newState.client.dynamicVoiceConfig.set(guild.id, config);
+            }
 
             // Handle user joining the trigger channel
             if (newState.channelId === config.triggerChannelId && oldState.channelId !== config.triggerChannelId) {

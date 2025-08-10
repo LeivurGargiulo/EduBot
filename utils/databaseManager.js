@@ -48,18 +48,10 @@ class DatabaseManager {
      * Create all necessary tables
      */
     createTables() {
-        // Guild configurations table
+        // Guilds table (simplified - only for essential data)
         this.db.exec(`
-            CREATE TABLE IF NOT EXISTS guild_configs (
+            CREATE TABLE IF NOT EXISTS guilds (
                 guild_id TEXT PRIMARY KEY,
-                moderation_channel_id TEXT,
-                support_channel_id TEXT,
-                doubts_channel_id TEXT,
-                announcements_channel_id TEXT,
-                staff_role_id TEXT,
-                moderator_role_id TEXT,
-                feedback_url TEXT,
-                guidelines_url TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -74,22 +66,7 @@ class DatabaseManager {
                 role_id TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(guild_id, role_type),
-                FOREIGN KEY (guild_id) REFERENCES guild_configs(guild_id) ON DELETE CASCADE
-            )
-        `);
-
-        // Verification configurations table
-        this.db.exec(`
-            CREATE TABLE IF NOT EXISTS verification_configs (
-                guild_id TEXT PRIMARY KEY,
-                enabled BOOLEAN DEFAULT FALSE,
-                channel_id TEXT,
-                role_id TEXT,
-                title TEXT,
-                description TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (guild_id) REFERENCES guild_configs(guild_id) ON DELETE CASCADE
+                FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
             )
         `);
 
@@ -104,7 +81,7 @@ class DatabaseManager {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(guild_id, section, key_name),
-                FOREIGN KEY (guild_id) REFERENCES guild_configs(guild_id) ON DELETE CASCADE
+                FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
             )
         `);
 
@@ -122,7 +99,7 @@ class DatabaseManager {
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (guild_id) REFERENCES guild_configs(guild_id) ON DELETE CASCADE
+                FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
             )
         `);
 
@@ -139,9 +116,32 @@ class DatabaseManager {
             )
         `);
 
-        // Commissions table
+        // Educational Commissions table (course sections)
         this.db.exec(`
-            CREATE TABLE IF NOT EXISTS commissions (
+            CREATE TABLE IF NOT EXISTS educational_commissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                commission_code TEXT NOT NULL,
+                course_code TEXT NOT NULL,
+                course_name TEXT NOT NULL,
+                shift TEXT DEFAULT 'G',
+                number TEXT NOT NULL,
+                role_id TEXT NOT NULL,
+                text_channel_id TEXT NOT NULL,
+                notifications_channel_id TEXT NOT NULL,
+                chat_channel_id TEXT NOT NULL,
+                voice_channel_id TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, commission_code),
+                FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
+            )
+        `);
+
+        // Art Commissions table (for future use)
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS art_commissions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id TEXT NOT NULL,
                 title TEXT NOT NULL,
@@ -153,7 +153,7 @@ class DatabaseManager {
                 artist_id TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (guild_id) REFERENCES guild_configs(guild_id) ON DELETE CASCADE
+                FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
             )
         `);
 
@@ -181,13 +181,15 @@ class DatabaseManager {
             CREATE INDEX IF NOT EXISTS idx_courses_guild_active ON courses(guild_id, is_active);
             CREATE INDEX IF NOT EXISTS idx_enrollments_course_user ON course_enrollments(course_id, user_id);
             CREATE INDEX IF NOT EXISTS idx_reminders_scheduled_time ON reminders(scheduled_time, is_sent);
+            CREATE INDEX IF NOT EXISTS idx_educational_commissions_guild_code ON educational_commissions(guild_id, commission_code);
+            CREATE INDEX IF NOT EXISTS idx_educational_commissions_course ON educational_commissions(guild_id, course_code);
         `);
 
         console.log('✅ Database tables created successfully');
     }
 
     /**
-     * Get guild configuration
+     * Get guild configuration (simplified - only essential data)
      * @param {string} guildId 
      * @returns {Object|null}
      */
@@ -195,24 +197,19 @@ class DatabaseManager {
         if (!this.initialized) return null;
 
         try {
-            const stmt = this.db.prepare(`
-                SELECT * FROM guild_configs WHERE guild_id = ?
+            // Get guild record
+            const guildStmt = this.db.prepare(`
+                SELECT * FROM guilds WHERE guild_id = ?
             `);
-            const config = stmt.get(guildId);
-            
-            if (!config) return null;
+            const guild = guildStmt.get(guildId);
+
+            if (!guild) return null;
 
             // Get identity roles
             const identityRolesStmt = this.db.prepare(`
                 SELECT role_type, role_id FROM identity_roles WHERE guild_id = ?
             `);
             const identityRoles = identityRolesStmt.all(guildId);
-            
-            // Get verification config
-            const verificationStmt = this.db.prepare(`
-                SELECT * FROM verification_configs WHERE guild_id = ?
-            `);
-            const verification = verificationStmt.get(guildId);
 
             // Get custom texts
             const customTextsStmt = this.db.prepare(`
@@ -222,9 +219,8 @@ class DatabaseManager {
 
             // Format the response
             const formattedConfig = {
-                ...config,
+                guildId: guild.guild_id,
                 identityRoles: {},
-                verification: verification || { enabled: false },
                 customTexts: {}
             };
 
@@ -249,7 +245,7 @@ class DatabaseManager {
     }
 
     /**
-     * Set guild configuration
+     * Set guild configuration (simplified - only essential data)
      * @param {string} guildId 
      * @param {Object} config 
      */
@@ -258,36 +254,14 @@ class DatabaseManager {
 
         try {
             this.db.transaction(() => {
-                // Insert or update main config
-                const upsertStmt = this.db.prepare(`
-                    INSERT INTO guild_configs (
-                        guild_id, moderation_channel_id, support_channel_id, 
-                        doubts_channel_id, announcements_channel_id, staff_role_id,
-                        moderator_role_id, feedback_url, guidelines_url, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                // Insert or update guild record
+                const upsertGuildStmt = this.db.prepare(`
+                    INSERT INTO guilds (guild_id, updated_at)
+                    VALUES (?, CURRENT_TIMESTAMP)
                     ON CONFLICT(guild_id) DO UPDATE SET
-                        moderation_channel_id = excluded.moderation_channel_id,
-                        support_channel_id = excluded.support_channel_id,
-                        doubts_channel_id = excluded.doubts_channel_id,
-                        announcements_channel_id = excluded.announcements_channel_id,
-                        staff_role_id = excluded.staff_role_id,
-                        moderator_role_id = excluded.moderator_role_id,
-                        feedback_url = excluded.feedback_url,
-                        guidelines_url = excluded.guidelines_url,
                         updated_at = CURRENT_TIMESTAMP
                 `);
-
-                upsertStmt.run(
-                    guildId,
-                    config.moderationChannelId || null,
-                    config.supportChannelId || null,
-                    config.doubtsChannelId || null,
-                    config.announcementsChannelId || null,
-                    config.staffRoleId || null,
-                    config.moderatorRoleId || null,
-                    config.feedbackUrl || null,
-                    config.guidelinesUrl || null
-                );
+                upsertGuildStmt.run(guildId);
 
                 // Handle identity roles
                 if (config.identityRoles) {
@@ -310,31 +284,6 @@ class DatabaseManager {
                     });
                 }
 
-                // Handle verification config
-                if (config.verification) {
-                    const upsertVerificationStmt = this.db.prepare(`
-                        INSERT INTO verification_configs (
-                            guild_id, enabled, channel_id, role_id, title, description, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                        ON CONFLICT(guild_id) DO UPDATE SET
-                            enabled = excluded.enabled,
-                            channel_id = excluded.channel_id,
-                            role_id = excluded.role_id,
-                            title = excluded.title,
-                            description = excluded.description,
-                            updated_at = CURRENT_TIMESTAMP
-                    `);
-
-                                    upsertVerificationStmt.run(
-                    guildId,
-                    config.verification.enabled ? 1 : 0,
-                    config.verification.channelId || null,
-                    config.verification.roleId || null,
-                    config.verification.title || null,
-                    config.verification.description || null
-                );
-                }
-
                 // Handle custom texts
                 if (config.customTexts) {
                     // Delete existing custom texts
@@ -351,7 +300,9 @@ class DatabaseManager {
 
                     Object.entries(config.customTexts).forEach(([section, sectionTexts]) => {
                         Object.entries(sectionTexts).forEach(([key, value]) => {
-                            insertTextStmt.run(guildId, section, key, value);
+                            if (value) {
+                                insertTextStmt.run(guildId, section, key, value);
+                            }
                         });
                     });
                 }
@@ -365,18 +316,45 @@ class DatabaseManager {
     }
 
     /**
-     * Get a specific config value
+     * Get a specific config value from guild_configs or custom_texts
      * @param {string} guildId 
      * @param {string} key 
      * @returns {string|null}
      */
     getConfigValue(guildId, key) {
-        const config = this.getGuildConfig(guildId);
-        return config ? config[key] : null;
+        if (!this.initialized) return null;
+
+        try {
+            // First try to get from guild_configs table
+            const configColumns = [
+                'moderation_channel_id', 'support_channel_id', 'doubts_channel_id',
+                'announcements_channel_id', 'staff_role_id', 'moderator_role_id',
+                'feedback_url', 'guidelines_url'
+            ];
+            
+            if (configColumns.includes(key)) {
+                const stmt = this.db.prepare(`
+                    SELECT ${key} FROM guild_configs WHERE guild_id = ?
+                `);
+                const result = stmt.get(guildId);
+                return result ? result[key] : null;
+            } else {
+                // Try to get from custom_texts table
+                const stmt = this.db.prepare(`
+                    SELECT value FROM custom_texts 
+                    WHERE guild_id = ? AND key_name = ?
+                `);
+                const result = stmt.get(guildId, key);
+                return result ? result.value : null;
+            }
+        } catch (error) {
+            console.error('❌ Error getting config value:', error);
+            return null;
+        }
     }
 
     /**
-     * Set a specific config value
+     * Set a specific config value in guild_configs or custom_texts
      * @param {string} guildId 
      * @param {string} key 
      * @param {string} value 
@@ -385,9 +363,38 @@ class DatabaseManager {
         if (!this.initialized) return false;
 
         try {
-            const config = this.getGuildConfig(guildId) || {};
-            config[key] = value;
-            return this.setGuildConfig(guildId, config);
+            // First ensure guild config exists
+            const existingConfig = this.getGuildConfig(guildId);
+            if (!existingConfig) {
+                // Create basic config if it doesn't exist
+                const basicConfig = { moderationChannelId: 'default' };
+                this.setGuildConfig(guildId, basicConfig);
+            }
+
+            // Check if it's a standard config column
+            const configColumns = [
+                'moderation_channel_id', 'support_channel_id', 'doubts_channel_id',
+                'announcements_channel_id', 'staff_role_id', 'moderator_role_id',
+                'feedback_url', 'guidelines_url'
+            ];
+            
+            if (configColumns.includes(key)) {
+                // Update in guild_configs table
+                const stmt = this.db.prepare(`
+                    UPDATE guild_configs SET ${key} = ?, updated_at = CURRENT_TIMESTAMP 
+                    WHERE guild_id = ?
+                `);
+                const result = stmt.run(value, guildId);
+                return result.changes > 0;
+            } else {
+                // Store in custom_texts table
+                const stmt = this.db.prepare(`
+                    INSERT OR REPLACE INTO custom_texts (guild_id, section, key_name, value, updated_at)
+                    VALUES (?, 'config', ?, ?, CURRENT_TIMESTAMP)
+                `);
+                const result = stmt.run(guildId, key, value);
+                return result.changes > 0;
+            }
         } catch (error) {
             console.error('❌ Error setting config value:', error);
             return false;
@@ -523,6 +530,152 @@ class DatabaseManager {
     }
 
     /**
+     * Get educational commission by code
+     * @param {string} guildId 
+     * @param {string} commissionCode 
+     * @returns {Object|null}
+     */
+    getEducationalCommission(guildId, commissionCode) {
+        if (!this.initialized) return null;
+
+        try {
+            const stmt = this.db.prepare(`
+                SELECT * FROM educational_commissions 
+                WHERE guild_id = ? AND commission_code = ?
+            `);
+            return stmt.get(guildId, commissionCode);
+        } catch (error) {
+            console.error('❌ Error getting educational commission:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Get all educational commissions for a guild
+     * @param {string} guildId 
+     * @returns {Array}
+     */
+    getEducationalCommissions(guildId) {
+        if (!this.initialized) return [];
+
+        try {
+            const stmt = this.db.prepare(`
+                SELECT * FROM educational_commissions 
+                WHERE guild_id = ? 
+                ORDER BY course_code, commission_code
+            `);
+            return stmt.all(guildId);
+        } catch (error) {
+            console.error('❌ Error getting educational commissions:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Add educational commission
+     * @param {string} guildId 
+     * @param {Object} commissionData 
+     * @returns {number|null} Commission ID
+     */
+    addEducationalCommission(guildId, commissionData) {
+        if (!this.initialized) return null;
+
+        try {
+            const stmt = this.db.prepare(`
+                INSERT INTO educational_commissions (
+                    guild_id, commission_code, course_code, course_name, shift, number,
+                    role_id, text_channel_id, notifications_channel_id, chat_channel_id, 
+                    voice_channel_id, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+
+            const result = stmt.run(
+                guildId,
+                commissionData.commissionCode,
+                commissionData.courseCode,
+                commissionData.courseName,
+                commissionData.shift || 'G',
+                commissionData.number,
+                commissionData.roleId,
+                commissionData.textChannelId,
+                commissionData.notificationsChannelId,
+                commissionData.chatChannelId,
+                commissionData.voiceChannelId,
+                commissionData.createdBy
+            );
+
+            return result.lastInsertRowid;
+        } catch (error) {
+            console.error('❌ Error adding educational commission:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Update educational commission
+     * @param {string} guildId 
+     * @param {string} commissionCode 
+     * @param {Object} commissionData 
+     * @returns {boolean}
+     */
+    updateEducationalCommission(guildId, commissionCode, commissionData) {
+        if (!this.initialized) return false;
+
+        try {
+            const stmt = this.db.prepare(`
+                UPDATE educational_commissions SET
+                    course_name = ?,
+                    role_id = ?,
+                    text_channel_id = ?,
+                    notifications_channel_id = ?,
+                    chat_channel_id = ?,
+                    voice_channel_id = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE guild_id = ? AND commission_code = ?
+            `);
+
+            const result = stmt.run(
+                commissionData.courseName,
+                commissionData.roleId,
+                commissionData.textChannelId,
+                commissionData.notificationsChannelId,
+                commissionData.chatChannelId,
+                commissionData.voiceChannelId,
+                guildId,
+                commissionCode
+            );
+
+            return result.changes > 0;
+        } catch (error) {
+            console.error('❌ Error updating educational commission:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Delete educational commission
+     * @param {string} guildId 
+     * @param {string} commissionCode 
+     * @returns {boolean}
+     */
+    deleteEducationalCommission(guildId, commissionCode) {
+        if (!this.initialized) return false;
+
+        try {
+            const stmt = this.db.prepare(`
+                DELETE FROM educational_commissions 
+                WHERE guild_id = ? AND commission_code = ?
+            `);
+
+            const result = stmt.run(guildId, commissionCode);
+            return result.changes > 0;
+        } catch (error) {
+            console.error('❌ Error deleting educational commission:', error);
+            return false;
+        }
+    }
+
+    /**
      * Close database connection
      */
     close() {
@@ -544,6 +697,12 @@ class DatabaseManager {
             // Validate backupPath
             if (typeof backupPath !== 'string') {
                 console.error('❌ Backup path must be a string, got:', typeof backupPath);
+                return false;
+            }
+
+            // Ensure database is open
+            if (!this.db.open) {
+                console.error('❌ Database is not open');
                 return false;
             }
 
